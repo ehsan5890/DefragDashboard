@@ -21,10 +21,12 @@ jobs:
         cache: "pip"
     - name: Install dependencies
       run: |
-        sudo apt-get install pyqt6 -y
         python -m pip install --upgrade pip pip-tools
         pip-compile --resolver=backtracking --output-file requirements.txt requirements.in requirements-test.in
         pip install -r requirements.txt
+  validate:
+    runs-on: ubuntu-latest
+    needs: build
     - name: Checking code quality step 1
       if: always()
       run: flake8 .
