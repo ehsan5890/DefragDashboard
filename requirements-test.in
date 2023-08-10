@@ -1,0 +1,10 @@
+pytest
+pytest-qt
+coverage
+toml
+flake8
+mypy
+pylint
+isort
+black
+pep8-naming

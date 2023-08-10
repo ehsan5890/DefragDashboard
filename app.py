@@ -1,43 +1,28 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget
-
+import argparse
 import sys
-
 from random import randint
 
+from PyQt6.QtWidgets import QApplication
 
-class AnotherWindow(QWidget):
-    """
-    This "window" is a QWidget. If it has no parent, it
-    will appear as a free-floating window as we want.
-    """
-    def __init__(self):
-        super().__init__()
-        layout = QVBoxLayout()
-        self.label = QLabel("Another Window % d" % randint(0,100))
-        layout.addWidget(self.label)
-        self.setLayout(layout)
+from demo import MainWindow
 
 
-class MainWindow(QMainWindow):
+if __name__ == "__main__":
 
-    def __init__(self):
-        super().__init__()
-        self.w = None  # No external window yet.
-        self.button = QPushButton("Push for Window")
-        self.button.clicked.connect(self.show_new_window)
-        self.setCentralWidget(self.button)
+    parser = argparse.ArgumentParser()
+    # TODO: create a parser for the arguments
+    # - path to the environment pickle file, None creates a new environment
+    # - path to the trained agent
+    # example: https://github.com/carlosnatalino/python-simple-anycast-wdm-simulator/blob/8fda7f7b19aa092b15d46578f678d45e392b872a/run.py#L140C5-L140C39
 
-    def show_new_window(self, checked):
-        if self.w is None:
-            self.w = AnotherWindow()
-            self.w.show()
+    # TODO:
+    # - create an Gym environment or load existing environment from pickle file
+    env = None  # from the assets folder
 
-        else:
-            self.w.close()  # Close window.
-            self.w = None  # Discard reference.
+    # load the agent from the assets folder
+    agent = None
 
-
-app = QApplication(sys.argv)
-w = MainWindow()
-w.show()
-app.exec()
+    app = QApplication(sys.argv)
+    w = MainWindow(env, agent)  # TODO: pass the environment to the main window
+    w.show()
+    app.exec()
