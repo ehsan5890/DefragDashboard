@@ -21,7 +21,6 @@ jobs:
         cache: "pip"
     - name: Install dependencies
       run: |
-        sudo apt-get install pyqt6 -y
         python -m pip install --upgrade pip pip-tools
         pip-compile --resolver=backtracking --output-file requirements.txt requirements.in requirements-test.in
         pip install -r requirements.txt
