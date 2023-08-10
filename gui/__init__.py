@@ -19,11 +19,17 @@ class AnotherWindow(QWidget):
 
 
 class MainWindow(QMainWindow):
+    """
+    Responsibilities:
+    - call functions
+    - all plotting
+    """
 
-    def __init__(self, env, agent):
+    def __init__(self, env, agent, tapi_client):
         super().__init__()
         self.env = env
         self.agent = agent
+        self.tapi_client = tapi_client
         self.w = None  # No external window yet.
         self.button = QPushButton("Push for Window")
         self.button.clicked.connect(self.show_new_window)

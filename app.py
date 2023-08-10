@@ -4,7 +4,8 @@ from random import randint
 
 from PyQt6.QtWidgets import QApplication
 
-from demo import MainWindow
+from gui import MainWindow
+from tapi import TAPIClient
 
 
 if __name__ == "__main__":
@@ -22,7 +23,10 @@ if __name__ == "__main__":
     # load the agent from the assets folder
     agent = None
 
+    # create a TAPI client and make sure it connects
+    tapi_client = TAPIClient()
+
     app = QApplication(sys.argv)
-    w = MainWindow(env, agent)  # TODO: pass the environment to the main window
+    w = MainWindow(env, agent, tapi_client)  # TODO: pass the environment to the main window
     w.show()
     app.exec()
