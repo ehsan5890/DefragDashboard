@@ -43,10 +43,10 @@ jobs:
 
     - name: Testing app
       if: always()
-      run: pytest
+      run: QT_QPA_PLATFORM=offscreen pytest
 
     - name: Running tests and evaluating code coverage for the unitary tests
       if: always()
       run: |
-        coverage run -m pytest
+        QT_QPA_PLATFORM=offscreen coverage run -m pytest
         coverage report -m --fail-under=100
