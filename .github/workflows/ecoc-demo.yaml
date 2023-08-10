@@ -21,10 +21,10 @@ jobs:
         cache: "pip"
     - name: Install dependencies
       run: |
-        sudo apt install qt6-base-dev -y
-        python -m pip install --upgrade pip pip-tools
-        python -m pip-compile --resolver=backtracking --output-file requirements.txt requirements.in requirements-test.in
-        python -m pip install -r requirements.txt
+        sudo apt-get install qt6-base-dev -y
+        pip install --upgrade pip pip-tools
+        pip-compile --resolver=backtracking --output-file requirements.txt requirements.in requirements-test.in
+        pip install -r requirements.txt
     - name: Checking code quality step 1
       if: always()
       run: flake8 .
