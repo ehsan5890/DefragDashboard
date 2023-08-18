@@ -2,9 +2,12 @@ import argparse
 import sys
 from random import randint
 import pickle
+import os
 
 from PyQt6.QtWidgets import QApplication
 from optical_rl_gym.envs.rmsa_env import shortest_available_path_first_fit
+from stable_baselines3 import PPO, DQN
+
 import gym
 from gui import MainWindow
 from tapi import TAPIClient
@@ -31,19 +34,35 @@ if __name__ == "__main__":
     topology_name = 'nsfnet_chen_eon'
     with open(f'./defrag/examples/topologies/{topology_name}_5-paths.h5', 'rb') as f:
         topology = pickle.load(f)
+
+    # these are env arguments for defragmentation environments
     env_args = dict(topology= topology, seed=10, allow_rejection=True, load=60,
                     mean_service_holding_time=0.5,
                     episode_length=200, num_spectrum_resources=320,
                     incremental_traffic_percentage=320,
                     rmsa_function=shortest_available_path_first_fit,
                     )
+
+    # these are env arguments for deepdefragmentation environments
+
+    env_args = dict(topology=topology, seed=10, load=80, num_spectrum_resources=320,
+                    allow_rejection=False,  # the agent cannot proactively reject a request
+                    mean_service_holding_time=25,
+                    # value is not set as in the paper to achieve comparable reward values
+                    episode_length=400,
+                    rmsa_function=shortest_available_path_first_fit,
+                    number_options=10,
+                    penalty_cycle=-0.8,
+                    penalty_movement=-0.1,
+                    only_FF=True)
     # TODO:
     # - create an Gym environment or load existing environment from pickle file
     # env = None  # from the assets folder
-    env = gym.make('Defragmentation-v0', **env_args)
-
+    # env = gym.make('Defragmentation-v0', **env_args)
+    env = gym.make('DeepDefragmentation-v0', **env_args)
     # load the agent from the assets folder
-    agent = None
+    print(os.getcwd())
+    agent = DQN.load( f"./assets/agent/tests/best_model")
 
     # create a TAPI client and make sure it connects
     tapi_client = TAPIClient()

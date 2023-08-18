@@ -1,3 +1,8 @@
+import traceback
+
+from multiprocessing import Process
+
+from PyQt6.QtCore import pyqtSignal, QRunnable, pyqtSlot, QThreadPool, QObject
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout
 
 from defrag.tests.test_defrag_dashboard import test_dashboard
@@ -6,6 +11,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from optical_rl_gym.utils import evaluate_heuristic
 from optical_rl_gym.envs.defragmentation_env import OldestFirst
+from optical_rl_gym.envs.deepdefragmentation_env import populate_network
 import copy
 import numpy as np
 import itertools
@@ -14,6 +20,80 @@ from random import randint
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 from matplotlib.figure import Figure
+
+
+def run_arrivals(env):
+    # oldest_scenario = OldestFirst(10, 10)
+    # evaluate_heuristic(env, oldest_scenario.choose_oldest_first, n_eval_episodes=2)
+    evaluate_heuristic(env, populate_network, n_eval_episodes=2)
+    return env
+
+
+class WorkerSignals(QObject):
+    '''
+    Defines the signals available from a running worker thread.
+
+    Supported signals are:
+
+    finished
+        No data
+
+    error
+        tuple (exctype, value, traceback.format_exc() )
+
+    result
+        object data returned from processing, anything
+
+    progress
+        int indicating % progress
+
+    '''
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+
+
+class Worker(QRunnable):
+    '''
+    Worker thread
+
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+
+    :param callback: The function callback to run on this worker thread. Supplied args and
+                     kwargs will be passed through to the runner.
+    :type callback: function
+    :param args: Arguments to pass to the callback function
+    :param kwargs: Keywords to pass to the callback function
+
+    '''
+
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+
+        self.signals = WorkerSignals()
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        Initialise the runner function with passed args, kwargs.
+        '''
+
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)  # Return the result of the processing
+        finally:
+            self.signals.finished.emit()  # Done
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -34,14 +114,27 @@ class MainWindow(QMainWindow):
     def __init__(self, env, agent, tapi_client):
         super().__init__()
         self.env = env
+        self.env_no_df = env
         self.agent = agent
         self.tapi_client = tapi_client
         self.w = None  # No external window yet.
 
+        # temporarily, we start the env from zero, so we need to run it for a while to plot spectrum grid. later on,
+        # we will start from a saved environment
+        evaluate_heuristic(self.env, populate_network, n_eval_episodes=2)
+        self.threadpool = QThreadPool()
+
         self.setWindowTitle("DefragDashboard")
         pagelayout = QVBoxLayout()
+        topology_layout = QHBoxLayout()
         button_layout = QHBoxLayout()
-        pagelayout.addLayout(button_layout)
+
+        # First horizontal layout
+        topology_plot = self.plot_topology()
+        topology_layout.addWidget(topology_plot)
+        grid_plot = self.plot_grid()
+        topology_layout.addWidget(grid_plot)
+
         self.btn_advance = QPushButton("advance ")
         self.btn_advance.pressed.connect(self.advance_arrivals)
         button_layout.addWidget(self.btn_advance)
@@ -62,76 +155,68 @@ class MainWindow(QMainWindow):
         self.btn_grid.pressed.connect(self.show_grid)
         button_layout.addWidget(self.btn_grid)
 
-        # self.button.clicked.connect(self.show_new_window)
-        # self.setCentralWidget(self.button)
+        pagelayout.addLayout(topology_layout)
+        pagelayout.addLayout(button_layout)
+
         widget = QWidget()
         widget.setLayout(pagelayout)
         self.setCentralWidget(widget)
 
     def show_grid(self):
-        self.plot_grid = PlotGrid(self)
-        self.plot_grid.show()
+        pass
 
     def show_topology(self):
-        self.plot_topology = PlotTopology(self)
-        self.plot_topology.show()
+        pass
 
     def advance_arrivals(self):
+        worker = Worker(run_arrivals, self.env)
+        worker.signals.result.connect(self.stop_arrivals)
+        self.threadpool.start(worker)
+        # worker.finished.connect(self.stop_arrivals)
         self.btn_advance.setEnabled(False)
         self.btn_advance.setText("running....")
-        oldest_scenario = OldestFirst(10, 10)
-        evaluate_heuristic(self.env, oldest_scenario.choose_oldest_first, n_eval_episodes=2)
+
+    def stop_arrivals(self, env):
+        self.env = env
         self.btn_advance.setEnabled(True)
         self.btn_advance.setText("advance")
 
     def start_drl(self):
-        pass
+        for _ in range(5):
+            obs_drl = self.env.reset()
+            obs_no_df = self.env_no_df.reset()
+            done, state = False, None
+            while not done:
+                action, _states = self.agent.predict(obs_drl, deterministic=True)
+                obs, reward, done, info = self.env.step(action)
+                if reward == -1:
+                    obs, reward, done, info = self.env.step(0)
 
     def reset_env(self):
         pass
 
-    def step(self):
-        action = self.agent.predict(env.observation())
-        self.env.step(action)
-
-
-class PlotTopology(QWidget):
-    def __init__(self, parent_window):
-        super().__init__()
-
-        self.parent_window = parent_window
-        self.setWindowTitle("topology plot")
-        # self.setGeometry(200, 200, 500, 400)
-
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.figure = plt.figure()
-        self.sc = FigureCanvasQTAgg(self.figure)
-        layout.addWidget(self.sc)
+    def plot_topology(self):
+        figure = plt.figure()
+        sc = FigureCanvasQTAgg(figure)
         # Plot the NetworkX graph on the Matplotlib canvas
-        G = self.parent_window.env.env.env.topology
+        G = self.env.env.env.topology
         pos = nx.spring_layout(G)  # You can choose a layout algorithm here
         nx.draw(G, pos, with_labels=True, node_color='skyblue', font_weight='bold', node_size=1000)
-        self.sc.draw()
+        return sc
 
-
-class PlotGrid(QWidget):
-    def __init__(self, parent_window):
-        super().__init__()
-
-        self.parent_window = parent_window
-        self.setWindowTitle("Spectrum assignment plot")
-        # self.setGeometry(200, 200, 500, 400)
-
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.figure = plt.figure(figsize=(15, 10))
-        self.sc = FigureCanvasQTAgg(self.figure)
-        layout.addWidget(self.sc)
-        topology = self.parent_window.env.env.env.topology
-        slot_allocation = self.parent_window.env.env.env.spectrum_slots_allocation
+    def plot_grid(self):
+        figure = plt.figure(figsize=(15, 10))
+        sc = FigureCanvasQTAgg(figure)
+        topology = self.env.env.env.topology
+        slot_allocation = self.env.env.env.spectrum_slots_allocation
         # Plot the spectrum assignment graph
-        plot_spectrum_assignment_on_canvas(topology, slot_allocation, self.sc, values=True, title="Spectrum Assignment")
+        return plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=True, title="Spectrum Assignment")
+
+
+    # def step(self):
+    #     action = self.agent.predict(env.observation())
+    #     self.env.step(action)
+
 
 
 def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, title=None):
@@ -177,4 +262,5 @@ def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, t
     plt.tight_layout()
     plt.xticks([x + 0.5 for x in plt.xticks()[0][:-1]], [x for x in plt.xticks()[1][:-1]])
 
-    canvas.draw()
+    # canvas.draw()
+    return canvas
