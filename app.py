@@ -36,16 +36,16 @@ if __name__ == "__main__":
         topology = pickle.load(f)
 
     # these are env arguments for defragmentation environments
-    env_args = dict(topology= topology, seed=10, allow_rejection=True, load=60,
-                    mean_service_holding_time=0.5,
-                    episode_length=200, num_spectrum_resources=320,
-                    incremental_traffic_percentage=320,
-                    rmsa_function=shortest_available_path_first_fit,
-                    )
+    # env_args = dict(topology= topology, seed=10, allow_rejection=True, load=60,
+    #                 mean_service_holding_time=0.5,
+    #                 episode_length=200, num_spectrum_resources=320,
+    #                 incremental_traffic_percentage=320,
+    #                 rmsa_function=shortest_available_path_first_fit,
+    #                 )
 
     # these are env arguments for deepdefragmentation environments
 
-    env_args = dict(topology=topology, seed=10, load=80, num_spectrum_resources=320,
+    env_args = dict(topology=topology, seed=10, load=30, num_spectrum_resources=160,
                     allow_rejection=False,  # the agent cannot proactively reject a request
                     mean_service_holding_time=25,
                     # value is not set as in the paper to achieve comparable reward values
@@ -59,10 +59,15 @@ if __name__ == "__main__":
     # - create an Gym environment or load existing environment from pickle file
     # env = None  # from the assets folder
     # env = gym.make('Defragmentation-v0', **env_args)
-    env = gym.make('DeepDefragmentation-v0', **env_args)
+    # env = gym.make('DeepDefragmentation-v0', **env_args)
+    with open('fragmented_env.pickle', 'rb') as file:
+        env = pickle.load(file)
     # load the agent from the assets folder
     print(os.getcwd())
-    agent = DQN.load( f"./assets/agent/tests/best_model")
+
+    ## testing changing the episode length
+    # env.env.env.episode_length = 20
+    agent = DQN.load( f"./assets/agent30/tests/best_model")
 
     # create a TAPI client and make sure it connects
     tapi_client = TAPIClient()
