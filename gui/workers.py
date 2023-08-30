@@ -85,12 +85,13 @@ class RunArrivalsWorker(QRunnable):
 
     '''
 
-    def __init__(self, environment_drl, environment_nodefrag):
-        super(Worker, self).__init__()
+    def __init__(self, environment_drl, environment_nodefrag, agent):
+        super(RunArrivalsWorker, self).__init__()
 
         # Store constructor arguments (re-used for processing)
         self.environment_drl = environment_drl
-        self.environment_nodegrag = environment_nodefrag
+        self.environment_nodefrag = environment_nodefrag
+        self.agent = agent
 
         # TODO: load the agent
 
@@ -101,30 +102,44 @@ class RunArrivalsWorker(QRunnable):
         '''
         Initialise the runner function with passed args, kwargs.
         '''
-
-
+        flag_blocking = False
+        r_frag_update = []
+        r_frag_update_nodefrag = []
         for _ in range(50):
+            if flag_blocking is True:
+                break
             obs_drl = self.environment_drl.reset()
             obs_no_df = self.environment_nodefrag.reset()
             done, state = False, None
-            arrival = 0
+            steps = 0
             while not done:
                 action, _states = self.agent.predict(obs_drl, deterministic=True)
-                obs_drl, reward, done, info = self.env.step(action)
+                obs_drl, reward, done, info = self.environment_drl.step(action)
                 if action == 0:
-                    obs_no_df, reward_df, done_df, info_df = self.env_no_df.step(0)
-
-                if self.env_no_df.env.env.service.accepted == False and self.env.env.env.service.accepted == True:
-                    a = 1
-
-                if self.env_no_df.env.env.service.accepted == True and self.env.env.env.service.accepted == False:
-                    b = 1
-
-                # self.update_grid(self.env.env.env.topology, self.env.env.env.spectrum_slots_allocation )
+                    obs_no_df, reward_df, done_df, info_df = self.environment_nodefrag.step(0)
                 if reward == -1:
-                    obs_drl, reward, done_2, info = self.env.step(0)
-                    obs_no_df, reward_df, done_df, info_df = self.env_no_df.step(0)
+                    obs_drl, reward, done_2, info = self.environment_drl.step(0)
+                    obs_no_df, reward_df, done_df, info_df = self.environment_nodefrag.step(0)
 
-                arrival += 1
-                if arrival % 10 == 0:
-                    self.signals.result.emit((self.environment_drl, self.environment_nodegrag, rewards_drl, rewards_nodefrag))
+
+
+                r_frag_list = self.environment_drl.env.env.rfrag_after_list
+                r_frag_update.append(r_frag_list[len(r_frag_list) - 1])
+
+                r_frag_nodefrag_list = self.environment_nodefrag.env.env.rfrag_after_list
+                r_frag_update_nodefrag.append(r_frag_list[len(r_frag_nodefrag_list) - 1])
+
+
+                if self.environment_nodefrag.env.env.previous_service_accepted == False and self.environment_drl.env.env.previous_service_accepted == True:
+                    flag_blocking = True
+                    self.signals.result.emit((self.environment_drl, self.environment_nodefrag, flag_blocking, r_frag_update,r_frag_update_nodefrag))
+                    break
+
+
+
+                steps += 1
+                if steps % 10 == 0:
+                    # self.signals.result.emit((self.environment_drl, self.environment_nodegrag, rewards_drl, rewards_nodefrag))
+                    self.signals.result.emit((self.environment_drl, self.environment_nodefrag, flag_blocking, r_frag_update, r_frag_update_nodefrag))
+                    r_frag_update = []
+                    r_frag_update_nodefrag = []

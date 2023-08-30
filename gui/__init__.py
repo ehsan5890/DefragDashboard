@@ -18,6 +18,7 @@ from optical_rl_gym.envs.defragmentation_env import OldestFirst
 
 from gui.workers import Worker, RunArrivalsWorker
 
+
 def run_arrivals(env):
     # oldest_scenario = OldestFirst(10, 10)
     # evaluate_heuristic(env, oldest_scenario.choose_oldest_first, n_eval_episodes=2)
@@ -38,6 +39,7 @@ class AnotherWindow(QWidget):
     This "window" is a QWidget. If it has no parent, it
     will appear as a free-floating window as we want.
     """
+
     def __init__(self, main_window):
         super().__init__()
 
@@ -52,9 +54,8 @@ class AnotherWindow(QWidget):
         self.grid_plot = self.main_window.plot_grid()
         spectrum_layout.addWidget(self.grid_plot)
 
-        self.grid_plot_no = self.main_window.plot_grid()
+        self.grid_plot_no = self.main_window.plot_grid(False)
         spectrum_layout_no.addWidget(self.grid_plot_no)
-
 
         self.layout.addLayout(spectrum_layout)
         self.layout.addLayout(spectrum_layout_no)
@@ -82,7 +83,6 @@ class MainWindow(QMainWindow):
         # evaluate_heuristic(self.env, populate_network, n_eval_episodes=30)
         # with open('fragmented_env.pickle', 'wb') as file:
         #     pickle.dump(env, file)
-
 
         self.threadpool = QThreadPool()
 
@@ -159,42 +159,30 @@ class MainWindow(QMainWindow):
         self.btn_advance.setText("advance")
 
     def start_drl(self):
-        # env_no_df = self.env_no_df
-        a = 0
-        b = 0
-        c = 0
-        d = 0
-        for _ in range(1):
-            # if a > 0 :
-            #     break
-            obs_drl = self.env.reset()
-            obs_no_df = self.env_no_df.reset()
-            done, state = False, None
-            while not done:
-                action, _states = self.agent.predict(obs_drl, deterministic=True)
-                obs_drl, reward, done, info = self.env.step(action)
-                if action == 0:
-                    obs_no_df, reward_df, done_df, info_df = self.env_no_df.step(0)
 
-                    if self.env_no_df.env.env.previous_service_accepted == False and self.env.env.env.previous_service_accepted == True:
-                        a += 1
-                        # self.another_window = AnotherWindow(self)
-                        # self.another_window.show()
-                        # break
+        worker = RunArrivalsWorker(
+            self.env,
+            self.env_no_df,
+            self.agent
+        )
 
-                    # if self.env_no_df.env.env.previous_service_accepted == True and self.env.env.env.previous_service_accepted == False:
-                    #     b += 1
-                    # if self.env_no_df.env.env.previous_service_accepted == True and self.env.env.env.previous_service_accepted == True:
-                    #     c += 1
-                    #
-                    # if self.env_no_df.env.env.previous_service_accepted == False and self.env.env.env.previous_service_accepted == False:
-                    #     d +=1
+        worker.signals.result.connect(self.update_plots)
+        self.threadpool.start(worker)
+        # self.update_grid(self.env.env.env.topology, self.env.env.env.spectrum_slots_allocation)
 
-
-                self.update_grid(self.env.env.env.topology, self.env.env.env.spectrum_slots_allocation )
-                if reward == -1:
-                    obs_drl, reward, done_2, info = self.env.step(0)
-                    obs_no_df, reward_df, done_df, info_df = self.env_no_df.step(0)
+    def update_plots(self, result):
+        self.x_data += 10
+        self.env = result[0]
+        self.env_no_df = result[1]
+        flag_blocking = result[2]
+        r_frag_update = result[3]
+        r_frag_nodefrag_update = result[4]
+        if flag_blocking is False:
+            self.update_grid(self.env.env.env.topology, self.env.env.env.spectrum_slots_allocation)
+            self.update_rfrag(r_frag_update, r_frag_nodefrag_update)
+        else:
+            self.another_window = AnotherWindow(self)
+            self.another_window.show()
 
     def reset_env(self):
         pass
@@ -208,21 +196,28 @@ class MainWindow(QMainWindow):
         nx.draw(G, pos, with_labels=True, node_color='skyblue', font_weight='bold', node_size=1000)
         return sc
 
-    def plot_grid(self):
+    def plot_grid(self, drl = True):
         figure = plt.figure(figsize=(15, 10))
         sc = FigureCanvasQTAgg(figure)
         topology = self.env.env.env.topology
-        slot_allocation = self.env.env.env.spectrum_slots_allocation
+        if drl:
+            slot_allocation = self.env.env.env.spectrum_slots_allocation
+        else:
+            slot_allocation = self.env_no_df.env.env.spectrum_slots_allocation
         # Plot the spectrum assignment graph
-        return plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=True, title="Spectrum Assignment")
+        return plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=True,
+                                                  title="Spectrum Assignment")
 
     def plot_rfrag(self):
-        x = np.arange(-400, 0)
+        self.x_data = np.arange(-400, 0)
         figure = plt.figure(figsize=(15, 10))
         sc = FigureCanvasQTAgg(figure)
         fig = sc.figure
         ax = fig.add_subplot(111)
-        ax.plot(x, self.env.env.env.rfrag_after_list, label='RSS metric')
+        self.r_frag = self.env.env.env.rfrag_after_list
+        self.r_frag_nodefrag = self.env_no_df.env.env.rfrag_after_list
+        ax.plot(self.x_data, self.r_frag, label='RSS metric DRL', color='blue')
+        ax.plot(self.x_data, self.r_frag_nodefrag, label='RSS metric No Defrag', color='red')
 
         ax.set_xlabel("Time unit")
         ax.set_ylabel("RSS metric")
@@ -230,6 +225,24 @@ class MainWindow(QMainWindow):
         ax.legend()
         sc.draw()
         return sc
+
+    def update_rfrag(self, r_frag_update, r_frag_nodefrag_update):
+        self.rfrag_plot.figure.clf()
+        ax = self.rfrag_plot.figure.gca()
+        r_frag_update_array= np.array(r_frag_update)
+        temporarily_array = self.r_frag[len(r_frag_update_array):]
+        self.r_frag = np.concatenate((temporarily_array, r_frag_update_array))
+        r_frag_update_array_nodefrag = np.array(r_frag_nodefrag_update)
+        temporarily_nodefrag_array = self.r_frag[len(r_frag_update_array_nodefrag):]
+        self.r_frag_nodefrag = np.concatenate((temporarily_nodefrag_array, r_frag_update_array_nodefrag))
+        ax.plot(self.x_data, self.r_frag, label='RSS metric DRL', color='blue')
+        ax.plot(self.x_data, self.r_frag_nodefrag, label='RSS metric No Defrag', color='red')
+        ax.set_xlabel("Time unit")
+        ax.set_ylabel("RSS metric")
+        ax.set_title("RSS metric")
+        ax.legend()
+        self.rfrag_plot.draw()
+
 
     def plot_shanon(self):
         x = np.arange(-400, 0)
@@ -262,19 +275,19 @@ class MainWindow(QMainWindow):
         return sc
 
     # def update_grid(self):
-        # topology = self.env.env.env.topology
-        # slot_allocation = self.env.env.env.spectrum_slots_allocation
-        # Plot the spectrum assignment graph
-        # canvas = plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=True, title="Spectrum Assignment")
-        # if self.grid_plot:
-        #     self.grid_plot.close()
-        #     # self.grid_plot = None
-        #     main_layout = self.centralWidget().layout()
-        #     main_layout.removeWidget(self.grid_plot)
-        #
-        # self.grid_plot = self.plot_grid()
-        # main_layout = self.centralWidget().layout()
-        # main_layout.addWidget(self.grid_plot)
+    # topology = self.env.env.env.topology
+    # slot_allocation = self.env.env.env.spectrum_slots_allocation
+    # Plot the spectrum assignment graph
+    # canvas = plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=True, title="Spectrum Assignment")
+    # if self.grid_plot:
+    #     self.grid_plot.close()
+    #     # self.grid_plot = None
+    #     main_layout = self.centralWidget().layout()
+    #     main_layout.removeWidget(self.grid_plot)
+    #
+    # self.grid_plot = self.plot_grid()
+    # main_layout = self.centralWidget().layout()
+    # main_layout.addWidget(self.grid_plot)
 
     def update_grid(self, topology, slot_allocation):
         canvas = self.grid_plot
@@ -300,11 +313,9 @@ class MainWindow(QMainWindow):
 
         return canvas
 
-
     # def step(self):
     #     action = self.agent.predict(env.observation())
     #     self.env.step(action)
-
 
 
 def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, title=None):
