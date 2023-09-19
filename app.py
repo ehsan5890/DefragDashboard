@@ -57,8 +57,6 @@ if __name__ == "__main__":
                     only_FF=True)
     # TODO:
     # - create an Gym environment or load existing environment from pickle file
-    # env = None  # from the assets folder
-    # env = gym.make('Defragmentation-v0', **env_args)
     # env = gym.make('DeepDefragmentation-v0', **env_args)
     with open('fragmented_env.pickle', 'rb') as file:
         env = pickle.load(file)

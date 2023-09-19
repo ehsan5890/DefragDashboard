@@ -1,0 +1,96 @@
+{
+    "tapi-connectivity:connectivity-service": [{
+    "tapi-adva:adva-connectivity-service-spec":
+        {
+        "customer": "vignesh"
+        },
+
+            "end-point": [
+                {
+                    "layer-protocol-name": "DSR",
+                    "layer-protocol-qualifier": "tapi-dsr:DIGITAL_SIGNAL_TYPE_OTU_4",
+                    "service-interface-point": {
+                        "service-interface-point-uuid": "00000010-0000-0000-0000-000000158458"
+                    },
+                    "tapi-adva:adva-connectivity-service-end-point-spec" : {
+                        "adva-client-port-parameters" : {
+                             "error-forwarding-mode": "EPC",
+                            "forwarding-error-correction": null,
+                           "laser-off-delay": "DISABLE",
+                           "laser-off-on-delay": "DISABLE",
+                            "laser-on-time": 0,
+                            "laser-off-time": 0,
+                            "admin-state": "AINS"
+                        },
+                        "adva-network-port-parameters" : {
+
+                            "channel": {
+                            "central-frequency": 19595,
+                            "frequency-constraint": {
+                            "adjustment-granularity": "G_50GHZ",
+                            "grid-type": "DWDM" }},
+
+                            "rx-channel": {
+                            "central-frequency": 19595,
+                            "frequency-constraint": {
+                            "adjustment-granularity": "G_50GHZ",
+                            "grid-type": "DWDM" }},
+
+                            "forwarding-error-correction": "EFEC-2",
+                            "fec-gain-latency": null,
+                            "termination-level": "OPU",
+                            "setpoint": 0
+                        }
+                    }
+                },
+                {
+                    "layer-protocol-name": "DSR",
+                    "layer-protocol-qualifier": "tapi-dsr:DIGITAL_SIGNAL_TYPE_OTU_4",
+                    "service-interface-point": {
+                        "service-interface-point-uuid": "00000010-0000-0000-0000-000000157504"
+
+
+                    },
+                    "tapi-adva:adva-connectivity-service-end-point-spec" : {
+                        "adva-client-port-parameters" : {
+                             "error-forwarding-mode": "EPC",
+                            "forwarding-error-correction": null,
+                           "laser-off-delay": "DISABLE",
+                           "laser-off-on-delay": "DISABLE",
+                            "laser-on-time": 0,
+                            "laser-off-time": 0,
+                            "admin-state": "AINS"
+                        },
+                        "adva-network-port-parameters" : {
+
+                            "channel": {
+                            "central-frequency": 19595,
+                            "frequency-constraint": {
+                            "adjustment-granularity": "G_50GHZ",
+                            "grid-type": "DWDM" }},
+
+                            "rx-channel": {
+                            "central-frequency": 19595,
+                            "frequency-constraint": {
+                            "adjustment-granularity": "G_50GHZ",
+                            "grid-type": "DWDM" }},
+
+                            "forwarding-error-correction": "EFEC-2",
+                            "fec-gain-latency": null,
+                            "termination-level": "OPU",
+                            "setpoint": 0
+                        }
+                    }
+                }
+            ],
+            "service-layer": "DSR",
+            "service-type": "POINT_TO_POINT_CONNECTIVITY",
+                    "name": [
+                                {
+                                    "value": "service_temp",
+                                    "value-name": "USER"
+                                }
+                            ]
+        }
+    ]
+}

@@ -1,0 +1,101 @@
+{
+    "tapi-topology:node": [
+        {
+            "uuid": "00000030-0000-0000-0000-000000042529",
+            "administrative-state": "UNLOCKED",
+            "cost-characteristic": [
+                {
+                    "cost-name": "NOT_SUPPORTED_MANDATORY_FIELD"
+                }
+            ],
+            "latency-characteristic": [
+                {
+                    "traffic-property-name": "NOT_SUPPORTED_MANDATORY_FIELD"
+                }
+            ],
+            "layer-protocol-name": [
+                "PHOTONIC_MEDIA",
+                "DSR",
+                "ODU"
+            ],
+            "lifecycle-state": "INSTALLED",
+            "name": [
+                {
+                    "value-name": "USER",
+                    "value": "NODE204"
+                },
+                {
+                    "value-name": "SYSTEM",
+                    "value": "10.139.29.12"
+                },
+                {
+                    "value-name": "INVENTORY_ID",
+                    "value": "/ne=10.139.29.12"
+                }
+            ],
+            "operational-state": "ENABLED",
+            "owned-node-edge-point": [
+                {
+                    "uuid": "30010040-0000-0000-0000-000000043001",
+                    "administrative-state": "UNLOCKED",
+                    "layer-protocol-name": "PHOTONIC_MEDIA",
+                    "lifecycle-state": "INSTALLED",
+                    "link-port-direction": "BIDIRECTIONAL",
+                    "link-port-role": "SYMMETRIC",
+                    "name": [
+                        {
+                            "value-name": "INVENTORY_ID",
+                            "value": "/ne=10.139.29.12/sh=1/sl=2/pt=N"
+                        },
+                        {
+                            "value-name": "USER",
+                            "value": "10.139.29.12/1-2-N"
+                        },
+                        {
+                            "value-name": "SYSTEM",
+                            "value": "10.139.29.12/PTP-1-2-N"
+                        }
+                    ],
+                    "operational-state": "DISABLED",
+                    "supported-cep-layer-protocol-qualifier": [
+                        "tapi-photonic-media:PHOTONIC_LAYER_QUALIFIER_OMS"
+                    ],
+                    "termination-direction": "BIDIRECTIONAL",
+                    "termination-state": "TERMINATION_STATE_UNKNOWN"
+                },
+…
+                {
+                    "uuid": "30020040-0000-0000-0000-000000042578",
+                    "administrative-state": "UNLOCKED",
+                    "layer-protocol-name": "PHOTONIC_MEDIA",
+                    "lifecycle-state": "INSTALLED",
+                    "link-port-direction": "BIDIRECTIONAL",
+                    "link-port-role": "SYMMETRIC",
+                    "name": [
+                        {
+                            "value-name": "INVENTORY_ID",
+                            "value": "/ne=10.139.29.12/sh=1/sl=10/pt=N"
+                        },
+                        {
+                            "value-name": "USER",
+                            "value": "10.139.29.12/1-10-N"
+                        },
+                        {
+                            "value-name": "SYSTEM",
+                            "value": "10.139.29.12/PTP-1-10-N"
+                        }
+                    ],
+                    "operational-state": "DISABLED",
+                    "supported-cep-layer-protocol-qualifier": [
+                        "tapi-photonic-media:PHOTONIC_LAYER_QUALIFIER_NMC"
+                    ],
+                    "termination-direction": "BIDIRECTIONAL",
+                    "termination-state": "TERMINATION_STATE_UNKNOWN"
+                }
+            ]
+        }
+    ]
+}
+
+
+
