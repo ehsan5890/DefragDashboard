@@ -101,7 +101,6 @@ class RunArrivalsWorker(QRunnable):
         self.signals = WorkerSignals()
         self.stopped = False
 
-
     @pyqtSlot()
     def run(self):
         '''
@@ -114,23 +113,15 @@ class RunArrivalsWorker(QRunnable):
         flag_first_allocation = False
         r_frag_update = []
         r_frag_update_nodefrag = []
-        reward_update  = []
+        reward_update = []
         reward_update_nodefrag = []
-
-        blocked_update  = []
+        blocked_update = []
         blocked_update_nodefrag = []
-
-
-        moves_update  = []
+        moves_update = []
         moves_update_nodefrag = []
-
         for _ in range(50):
-
-
-
             if flag_blocking is True and self.drl_stop:
                 break
-
 
             if self.drl_first_action and flag_first_allocation:
                 break
@@ -168,58 +159,38 @@ class RunArrivalsWorker(QRunnable):
 
                     obs_drl, reward, done_2, info = self.environment_drl.step(0)
                     obs_no_df, reward_df, done_df, info_df = self.environment_nodefrag.step(0)
-                    print(f"worker slot -lost-after2 is {self.environment_drl.env.env.last_spectrum_slot_allocation[2, 104]} ")
                 elif action != 0 and self.drl_first_action:
-                    print(
-                        f"worker slot -lost-after3 is {self.environment_drl.env.env.last_spectrum_slot_allocation[2, 104]} ")
                     flag_first_allocation = True
                     self.signals.result.emit((self.environment_drl, self.environment_nodefrag,
                                               flag_blocking, r_frag_update,
-                                              r_frag_update_nodefrag,reward_update,
+                                              r_frag_update_nodefrag, reward_update,
                                               reward_update_nodefrag,
                                               blocked_update,
-                                              blocked_update_nodefrag, moves_update, moves_update_nodefrag, True, slot_allocation_before_action , flag_first_allocation))
+                                              blocked_update_nodefrag, moves_update, moves_update_nodefrag, True,
+                                              slot_allocation_before_action, flag_first_allocation))
                     break
 
-
-                r_frag_list = self.environment_drl.env.env.rfrag_after_list
-                r_frag_update.append(r_frag_list[len(r_frag_list) - 1])
-
-                r_frag_nodefrag_list = self.environment_nodefrag.env.env.rfrag_after_list
-                r_frag_update_nodefrag.append(r_frag_nodefrag_list[len(r_frag_nodefrag_list) - 1])
-
-                reward_list = self.environment_drl.env.env.rewards
-                reward_update.append(reward_list[len(reward_list) - 1])
-
-                reward_list_nodefrag = self.environment_nodefrag.env.env.rewards
-                reward_update_nodefrag.append(reward_list_nodefrag[len(reward_list_nodefrag) - 1])
-
-                blocked_list = self.environment_drl.env.env.blocked_services
-                blocked_update.append(blocked_list[len(blocked_list) - 1])
-                # blocked_update.append(c)
-
-                blocked_list_nodefrag = self.environment_nodefrag.env.env.blocked_services
-                blocked_update_nodefrag.append(blocked_list_nodefrag[len(blocked_list_nodefrag) - 1])
-
+                r_frag_update.append(self.environment_drl.env.env.rfrag_after_list[-1])
+                r_frag_update_nodefrag.append(self.environment_nodefrag.env.env.rfrag_after_list[-1])
+                reward_update.append(self.environment_drl.env.env.rewards[-1])
+                reward_update_nodefrag.append(self.environment_nodefrag.env.env.rewards[-1])
+                blocked_update.append(self.environment_drl.env.env.blocked_services[-1])
+                blocked_update_nodefrag.append(self.environment_nodefrag.env.env.blocked_services[-1])
                 moves_update.append(self.environment_drl.env.env.num_moves_list[-1])
                 moves_update_nodefrag.append(self.environment_nodefrag.env.env.num_moves_list[-1])
                 # blocked_update_nodefrag.append(b)
                 steps += 1
 
-
-
                 if self.environment_nodefrag.env.env.previous_service_accepted == False and self.environment_drl.env.env.previous_service_accepted == True and self.drl_stop:
                     flag_blocking = True
                     self.signals.result.emit((self.environment_drl, self.environment_nodefrag,
                                               flag_blocking, r_frag_update,
-                                              r_frag_update_nodefrag,reward_update,
+                                              r_frag_update_nodefrag, reward_update,
                                               reward_update_nodefrag,
                                               blocked_update,
-                                              blocked_update_nodefrag, moves_update, moves_update_nodefrag, False, slot_allocation_before_action, flag_first_allocation ))
+                                              blocked_update_nodefrag, moves_update, moves_update_nodefrag, False,
+                                              slot_allocation_before_action, flag_first_allocation))
                     break
-
-
-
 
                 if steps % 10 == 0:
                     # self.signals.result.emit((self.environment_drl, self.environment_nodegrag, rewards_drl, rewards_nodefrag))
@@ -228,14 +199,18 @@ class RunArrivalsWorker(QRunnable):
                                                   flag_blocking, r_frag_update,
                                                   r_frag_update_nodefrag,
                                                   reward_update, reward_update_nodefrag,
-                                                  blocked_update, blocked_update_nodefrag, moves_update, moves_update_nodefrag, True, slot_allocation_before_action, flag_first_allocation))
+                                                  blocked_update, blocked_update_nodefrag, moves_update,
+                                                  moves_update_nodefrag, True, slot_allocation_before_action,
+                                                  flag_first_allocation))
 
                     else:
                         self.signals.result.emit((self.environment_drl, self.environment_nodefrag,
                                                   flag_blocking, r_frag_update,
                                                   r_frag_update_nodefrag,
                                                   reward_update, reward_update_nodefrag,
-                                                  blocked_update, blocked_update_nodefrag, moves_update, moves_update_nodefrag, False, slot_allocation_before_action, flag_first_allocation))
+                                                  blocked_update, blocked_update_nodefrag, moves_update,
+                                                  moves_update_nodefrag, False, slot_allocation_before_action,
+                                                  flag_first_allocation))
                     # print(f"{steps}\n\t{r_frag_update}\n\t{r_frag_update_nodefrag}")
                     r_frag_update = []
                     r_frag_update_nodefrag = []
@@ -248,7 +223,6 @@ class RunArrivalsWorker(QRunnable):
 
                     moves_update = []
                     moves_update_nodefrag = []
-
 
                     if self.stopped:
                         return
