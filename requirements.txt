@@ -4,60 +4,174 @@
 #
 #    pip-compile --output-file=requirements.txt requirements-test.in requirements.in
 #
+absl-py==2.0.0
+    # via tensorboard
+ale-py==0.8.1
+    # via shimmy
 astroid==2.15.6
     # via pylint
+autorom[accept-rom-license]==0.6.1
+    # via stable-baselines3
+autorom-accept-rom-license==0.6.1
+    # via autorom
 black==23.7.0
     # via -r requirements-test.in
+cachetools==5.3.1
+    # via google-auth
+certifi==2023.7.22
+    # via requests
+charset-normalizer==3.2.0
+    # via requests
 click==8.1.6
-    # via black
+    # via
+    #   autorom
+    #   autorom-accept-rom-license
+    #   black
+cloudpickle==2.2.1
+    # via
+    #   gym
+    #   gymnasium
+    #   stable-baselines3
+contourpy==1.1.1
+    # via matplotlib
 coverage==7.2.7
     # via -r requirements-test.in
+cycler==0.12.0
+    # via matplotlib
 dill==0.3.7
     # via pylint
 exceptiongroup==1.1.2
     # via pytest
+farama-notifications==0.0.4
+    # via gymnasium
+filelock==3.12.4
+    # via torch
 flake8==6.1.0
     # via
     #   -r requirements-test.in
     #   pep8-naming
+fonttools==4.42.1
+    # via matplotlib
+google-auth==2.23.2
+    # via
+    #   google-auth-oauthlib
+    #   tensorboard
+google-auth-oauthlib==1.0.0
+    # via tensorboard
+grpcio==1.58.0
+    # via tensorboard
+gym==0.26.2
+    # via -r requirements.in
+gym-notices==0.0.8
+    # via gym
+gymnasium==0.28.1
+    # via
+    #   shimmy
+    #   stable-baselines3
+idna==3.4
+    # via requests
+importlib-resources==6.1.0
+    # via ale-py
 iniconfig==2.0.0
     # via pytest
 isort==5.12.0
     # via
     #   -r requirements-test.in
     #   pylint
+jax-jumpy==1.0.0
+    # via gymnasium
+jinja2==3.1.2
+    # via torch
+kiwisolver==1.4.5
+    # via matplotlib
 lazy-object-proxy==1.9.0
     # via astroid
+markdown==3.4.4
+    # via tensorboard
+markdown-it-py==3.0.0
+    # via rich
+markupsafe==2.1.3
+    # via
+    #   jinja2
+    #   werkzeug
+matplotlib==3.8.0
+    # via stable-baselines3
 mccabe==0.7.0
     # via
     #   flake8
     #   pylint
+mdurl==0.1.2
+    # via markdown-it-py
+mpmath==1.3.0
+    # via sympy
 mypy==1.4.1
     # via -r requirements-test.in
 mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
+networkx==3.1
+    # via torch
+numpy==1.26.0
+    # via
+    #   ale-py
+    #   contourpy
+    #   gym
+    #   gymnasium
+    #   jax-jumpy
+    #   matplotlib
+    #   opencv-python
+    #   pandas
+    #   shimmy
+    #   stable-baselines3
+    #   tensorboard
+oauthlib==3.2.2
+    # via requests-oauthlib
+opencv-python==4.8.1.78
+    # via stable-baselines3
 packaging==23.1
     # via
     #   black
+    #   matplotlib
     #   pytest
+pandas==2.1.1
+    # via stable-baselines3
 pathspec==0.11.2
     # via black
 pep8-naming==0.13.3
     # via -r requirements-test.in
+pillow==10.0.1
+    # via
+    #   matplotlib
+    #   stable-baselines3
 platformdirs==3.10.0
     # via
     #   black
     #   pylint
 pluggy==1.2.0
     # via pytest
+protobuf==4.24.3
+    # via tensorboard
+psutil==5.9.5
+    # via stable-baselines3
+pyasn1==0.5.0
+    # via
+    #   pyasn1-modules
+    #   rsa
+pyasn1-modules==0.3.0
+    # via google-auth
 pycodestyle==2.11.0
     # via flake8
 pyflakes==3.1.0
     # via flake8
+pygame==2.5.2
+    # via stable-baselines3
+pygments==2.16.1
+    # via rich
 pylint==2.17.5
     # via -r requirements-test.in
+pyparsing==3.1.1
+    # via matplotlib
 pyqt6==6.5.2
     # via -r requirements.in
 pyqt6-qt6==6.5.2
@@ -70,6 +184,39 @@ pytest==7.4.0
     #   pytest-qt
 pytest-qt==4.2.0
     # via -r requirements-test.in
+python-dateutil==2.8.2
+    # via
+    #   matplotlib
+    #   pandas
+pytz==2023.3.post1
+    # via pandas
+requests==2.31.0
+    # via
+    #   -r requirements.in
+    #   autorom
+    #   autorom-accept-rom-license
+    #   requests-oauthlib
+    #   tensorboard
+requests-oauthlib==1.3.1
+    # via google-auth-oauthlib
+rich==13.5.3
+    # via stable-baselines3
+rsa==4.9
+    # via google-auth
+shimmy[atari]==0.2.1
+    # via stable-baselines3
+six==1.16.0
+    # via
+    #   python-dateutil
+    #   tensorboard
+stable-baselines3[extra]==2.0.0
+    # via -r requirements.in
+sympy==1.12
+    # via torch
+tensorboard==2.14.1
+    # via stable-baselines3
+tensorboard-data-server==0.7.1
+    # via tensorboard
 toml==0.10.2
     # via -r requirements-test.in
 tomli==2.0.1
@@ -80,9 +227,25 @@ tomli==2.0.1
     #   pytest
 tomlkit==0.12.1
     # via pylint
+torch==2.0.1
+    # via stable-baselines3
+tqdm==4.66.1
+    # via stable-baselines3
 typing-extensions==4.7.1
     # via
+    #   ale-py
     #   astroid
+    #   gymnasium
     #   mypy
+    #   torch
+tzdata==2023.3
+    # via pandas
+urllib3==2.0.5
+    # via requests
+werkzeug==2.3.7
+    # via tensorboard
 wrapt==1.15.0
     # via astroid
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

@@ -9,7 +9,6 @@ import numpy as np
 from optical_rl_gym.utils import Path, Service
 import os
 import random
-import pandas as pd
 
 from optical_rl_gym.utils import plot_spectrum_assignment, plot_spectrum_assignment_and_waste, DefragmentationOption
 from optical_rl_gym.envs.rmsa_env import shortest_path_first_fit, shortest_available_path_first_fit, \

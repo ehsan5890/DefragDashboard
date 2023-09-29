@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('-rmsa', '--rmsa_function', default=shortest_available_path_first_fit)
     args = parser.parse_args()
     topology_name = 'nsfnet_chen_eon'
-    with open(f'./defrag/examples/topologies/{topology_name}_5-paths.h5', 'rb') as f:
+    with open(f'./deepdefrag/examples/topologies/{topology_name}_5-paths.h5', 'rb') as f:
         topology = pickle.load(f)
 
     # these are env arguments for defragmentation environments
