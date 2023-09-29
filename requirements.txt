@@ -86,10 +86,3 @@ typing-extensions==4.7.1
     #   mypy
 wrapt==1.15.0
     # via astroid
-
-networkx~=3.1
-matplotlib~=3.7.2
-numpy~=1.25.2
-gym~=0.26.2
-pandas~=2.0.3
-setuptools~=68.0.0
