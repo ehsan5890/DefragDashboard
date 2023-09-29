@@ -89,7 +89,7 @@ class TapiWindow(QWidget):
 
         route = " -> ".join(self.main_window.env.env.env.last_service_to_defrag.route.node_list)
         label_text = f"demand ID is {self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n The route" \
-                     f" is {route} and \n the old initial slot is {self.main_window.env.env.env.last_old_initial_slot} and \n the new initial slot is {self.main_window.env.env.env.last_new_initial_slot}"
+                     f" is {route}, \n the old initial slot is {self.main_window.env.env.env.last_old_initial_slot} and \n the new initial slot is {self.main_window.env.env.env.last_new_initial_slot}"
 
         label = QLabel(label_text)
         font = QFont()
@@ -145,8 +145,10 @@ class AnotherWindow(QWidget):
         self.grid_plot.setFixedSize(1400, 500)
         spectrum_layout.addWidget(self.grid_plot)
 
+        route = " -> ".join(self.main_window.env.env.env.previous_service.route.node_list)
+
         label_text = f"demand ID is {self.main_window.env.env.env.previous_service.service_id} \n from source {self.main_window.env.env.env.previous_service.source} to destination {self.main_window.env.env.env.previous_service.destination}. \n The route" \
-                     f"is {self.main_window.env.env.env.previous_service.route.node_list} and \n the initial slot is {self.main_window.env.env.env.previous_service.initial_slot}"
+                     f" is {route}, \n the initial slot is {self.main_window.env.env.env.previous_service.initial_slot}"
         label = QLabel(label_text)
         font = QFont()
         font.setPointSize(16)  # Set the desired font size
@@ -185,8 +187,10 @@ class FirstAllocationWindow(QWidget):
         self.grid_plot_before.setFixedSize(1400, 500)
         spectrum_layout.addWidget(self.grid_plot_before)
 
+        route = " -> ".join(self.main_window.env.env.env.last_service_to_defrag.route.node_list)
+
         label_text = f"demand ID is {self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n The route" \
-                     f"is {self.main_window.env.env.env.last_service_to_defrag.route.node_list} and \n the old initial slot is {self.main_window.env.env.env.last_old_initial_slot} and \n the new initial slot is {self.main_window.env.env.env.last_new_initial_slot}"
+                     f" is {route}, \n the old initial slot is {self.main_window.env.env.env.last_old_initial_slot} and \n the new initial slot is {self.main_window.env.env.env.last_new_initial_slot}"
         label = QLabel(label_text)
         font = QFont()
         font.setPointSize(16)  # Set the desired font size
