@@ -1,0 +1,2 @@
+#{"t_start": 1684749165.7996645, "env_id": "DeepDefragmentation-v0"}
+r,l,t,episode_service_blocking_rate,service_blocking_rate,reward,number_movements,number_defragmentation_procedure,number_arrivals,bit_rate_blocking_rate,number_movements_episode,number_defragmentation_procedure_episode,service_blocked_eopisode,number_options,existing_options

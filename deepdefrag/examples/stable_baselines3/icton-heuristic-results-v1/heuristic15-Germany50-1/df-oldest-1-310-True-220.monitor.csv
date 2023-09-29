@@ -1,0 +1,2 @@
+#{"t_start": 1692017090.2957819, "env_id": "Defragmentation-v0"}
+r,l,t,episode_service_blocking_rate,service_blocking_rate,reward,number_movements,number_defragmentation_procedure,number_arrivals,bit_rate_blocking_rate,number_movements_episode,number_defragmentation_procedure_episode,service_blocked_eopisode,number_options,existing_options,episode_service_blocking_rate_fragmentation,episode_service_blocking_rate_lack,episode_cuts,episode_frag_metric,episode_shanon_entropy
