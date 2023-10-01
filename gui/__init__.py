@@ -733,11 +733,11 @@ class DtMainWindow(QMainWindow):
         self.threadpool = QThreadPool()
 
         self.setWindowTitle("DefragDashboard for digital twin")
-        self.dt_create_topology_slot()
         pagelayout = QVBoxLayout()
         topology_layout = QHBoxLayout()
         button_and_text_layout = QHBoxLayout()  # Use QHBoxLayout for buttons and QTextEdit together.
 
+        self.load()  # TODO: comment later
 
         self.topology_plot = self.dt_plot_topology()
         self.topology_plot.setFixedSize(400, 500)
@@ -745,7 +745,6 @@ class DtMainWindow(QMainWindow):
         self.grid_plot = self.dt_plot_grid()
         self.grid_plot.setFixedSize(1400, 500)
         topology_layout.addWidget(self.grid_plot)
-
 
         pagelayout.addLayout(topology_layout)
         pagelayout.addLayout(button_and_text_layout)
@@ -755,21 +754,22 @@ class DtMainWindow(QMainWindow):
         button_panel_layout = QVBoxLayout()
         button_panel.setLayout(button_panel_layout)
         button_load = QPushButton("Load")
-        button1 = QPushButton("Perform Defragmentation")
-        button2 = QPushButton("Reset")
+        button_load.pressed.connect(self.load)
+        button_defrag = QPushButton("Perform Defragmentation")
+        button_reset = QPushButton("Reset")
         button_panel_layout.addWidget(button_load)
-        button_panel_layout.addWidget(button1)
-        button_panel_layout.addWidget(button2)
+        button_panel_layout.addWidget(button_defrag)
+        button_panel_layout.addWidget(button_reset)
 
         # Create QTextEdit
 
-        path_create = "tapi/tapi-create.json"
-        path_delete = "tapi/tapi-delete.json"
-        json_data = load_json_from_file(path_create)
-        json_data_delete = load_json_from_file(path_delete)
+        # path_create = "tapi/tapi-create.json"
+        # path_delete = "tapi/tapi-delete.json"
+        # json_data = load_json_from_file(path_create)
+        # json_data_delete = load_json_from_file(path_delete)
         text_edit = QTextEdit(self)
         text_edit.setGeometry(10, 10, 580, 380)
-        text_edit.setPlainText(json.dumps(json_data, indent=4))
+        # text_edit.setPlainText(json.dumps(json_data, indent=4))
         # Add button panel and QTextEdit to button_and_text_layout
         button_and_text_layout.addWidget(button_panel)
         button_and_text_layout.addWidget(text_edit)
@@ -779,52 +779,38 @@ class DtMainWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.showFullScreen()
 
+    def load(self):
+        self.topology = nx.DiGraph()
+        self.node_dict = {}
+        
+        context = self.tapi_client.get_context()
+        for node in context["tapi-common:context"]["tapi-topology:topology-context"]["topology"][0]["node"]:
+            self.topology.add_node(node["name"][0]["value"], uuid=node["uuid"])
+            self.node_dict[node["uuid"]] = node["name"][0]["value"]
+        
+        _id = 0
+        for link in context["tapi-common:context"]["tapi-topology:topology-context"]["topology"][0]["link"]:
+            node_1 = self.node_dict[link["node-edge-point"][0]["node-uuid"]]
+            node_2 = self.node_dict[link["node-edge-point"][1]["node-uuid"]]
+            if not self.topology.has_edge(node_1, node_2):
+                print(_id, link["uuid"])
+                print("\t", node_1, node_2)
+                self.topology.add_edge(node_1, node_2, id=_id, uuid=link["uuid"])
+                _id += 1
+        
+        self.slot_allocation = np.full((self.topology.number_of_edges(), 10), fill_value=-1)
 
+        
 
-    def dt_create_topology_slot(self):
-        # Create an empty graph
-        G = nx.Graph()
-        # Add nodes
-        G.add_nodes_from([1, 2, 3, 4])
-        # Add edges to form a ring (cycle)
-        G.add_edges_from([(1, 2), (2, 4), (3, 4), (1, 3)])
-        # Add an edge connecting node 1 to node 3
-        G.add_edge(1, 4)
-        # Define custom node positions to arrange nodes in a square
-        self.topology = G
-        edge_id_mapping = {}
-        for i, edge in enumerate(G.edges()):
-            edge_id_mapping[edge] = i
-
-        # Set the 'id' attribute for each edge
-        for edge, edge_id in edge_id_mapping.items():
-            G[edge[0]][edge[1]]['id'] = edge_id
-
-        # Print the edge IDs
-        for edge in G.edges(data=True):
-            print(f"Edge {edge[0]} - {edge[1]} has ID {edge[2]['id']}")
-        # Create a 5x10 ndarray filled with -1
-        slot_allocation = np.full((5, 10), -1)
-
-        # Set the specific values as mentioned in the question
-        slot_allocation[0, 3] = 1
-        slot_allocation[0, 5] = 3
-        slot_allocation[0, 8] = 4
-        slot_allocation[1, 1] = 2
-        slot_allocation[1, 3] = 5
-        slot_allocation[2, 5] = 3
-        slot_allocation[3, 3] = 1
-        slot_allocation[4, 1] = 2
-
-        print(slot_allocation)
-        self.slot_allocation= slot_allocation
-        # Print the resulting ndarray
-
+        for i in range(10):
+            index = randint(0, self.topology.number_of_edges() - 1)
+            row = randint(0, 9)
+            self.slot_allocation[index, row] = randint(1, 20)
 
     def dt_plot_topology(self):
         figure = plt.figure()
         sc = FigureCanvasQTAgg(figure)
-        pos = {1: (0, 1), 2: (1, 1), 3: (0, 0), 4: (1, 0)}
+        pos = nx.spring_layout(self.topology, seed=2)  # You can choose a layout algorithm here
         nx.draw(self.topology, pos, with_labels=True, node_color='skyblue', font_weight='bold', node_size=1000)
         return sc
 
