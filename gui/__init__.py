@@ -6,8 +6,9 @@ import json
 import pprint
 
 from PyQt6.QtCore import QThreadPool
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QTextEdit
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QTextEdit, QDialog
 from PyQt6.QtGui import QFont
+import requests
 
 import networkx as nx
 import numpy as np
@@ -841,15 +842,32 @@ class DtMainWindow(QMainWindow):
         return text
     
     def perform_defragmentation(self):
-        self.service_to_defragment
         response = requests.delete(
             f"https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/",
             headers={
                 "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
             },
             verify=False,
+            timeout=300,
         )
         print(response.status_code)
+        text = "## Performing defragmentation\n"
+        text += f"### Deleting service {self.service_to_defragment}\n"
+        text += f"#### HTTP DELETE https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/\n\n"
+        if response.status_code != 204:
+            text += "<p font-color='red'>Error!</p>"
+            text += "\n\n"
+            text += self.text_edit.toMarkdown()
+            self.text_edit.setMarkdown(text)
+            return
+        else:
+            text += "<p font-color='blue'>Success!</p>"
+            text += "\n\n"
+        
+        
+
+        text += self.text_edit.toMarkdown()
+        self.text_edit.setMarkdown(text)
 
     def load(self):
         
@@ -914,35 +932,6 @@ class DtMainWindow(QMainWindow):
         canvas = plot_spectrum_assignment_on_canvas(self.topology, self.slot_allocation, self.grid_plot.figure.canvas, values=True,
                                                   title=title)
         canvas.draw()
-
-        pass
-
-        # canvas = self.grid_plot
-        # canvas.figure.clf()  # Clear the previous plot
-
-        # cmap = plt.cm.get_cmap("tab20")
-        # cmap.set_under(color='white')
-        # cmap_reverse = plt.cm.viridis_r
-        # cmap_reverse.set_under(color='black')
-        # # https://stackoverflow.com/questions/7164397/find-the-min-max-excluding-zeros-in-a-numpy-array-or-a-tuple-in-python
-        # masked_a = np.ma.masked_equal(self.slot_allocation, -1, copy=False)
-        # norm = mcolors.LogNorm(vmin=masked_a.min(), vmax=self.slot_allocation.max())
-
-        # # p = ax.pcolor(vector, cmap=cmap, norm=norm, edgecolors='gray')
-        # p = canvas.figure.add_subplot(111).pcolor(slot_allocation, cmap=cmap, norm=norm, edgecolors='gray')
-
-        # ax = canvas.figure.gca()
-        # ax.set_xlabel('Frequency slot')
-        # ax.set_ylabel('Link')
-        # plt.yticks([topology.edges[link]['id'] + .5 for link in topology.edges()],
-        #            [f'{topology.edges[link]["id"]} ({link[0]}-{link[1]})' for link in topology.edges()])
-
-        # plt.title("Spectrum Assignment")  # Set the title
-        # plt.xticks([x + 0.5 for x in plt.xticks()[0][:-1]], [x for x in plt.xticks()[1][:-1]])
-        # plt.tight_layout()
-        # canvas.draw()  # Redraw the canvas
-
-
 
 
 
