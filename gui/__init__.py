@@ -3,6 +3,7 @@ import itertools
 import pickle
 from random import randint
 import json
+import re
 
 from PyQt6.QtCore import QThreadPool
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QTextEdit
@@ -82,10 +83,12 @@ class TapiWindow(QWidget):
 
         self.text_edit = QTextEdit(self)
         self.text_edit.setGeometry(10, 10, 580, 380)
-        self.text_edit.setPlainText(json.dumps(json_data, indent=4))
+        text_create = "http POST 'https://172.20.132.200:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context'\n"
+        text_create += json.dumps(json_data, indent=4)
+        # self.text_edit.setPlainText(json.dumps(json_data, indent=4))
+        self.text_edit.setPlainText(text_create)
         panel_layout.addWidget(self.text_edit)
         create_message.addWidget(panel)
-
 
         route = " -> ".join(self.main_window.env.env.env.last_service_to_defrag.route.node_list)
         label_text = f"demand ID is {self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n The route" \
@@ -102,7 +105,6 @@ class TapiWindow(QWidget):
         panel_layout_delete = QVBoxLayout()
         panel_delete.setLayout(panel_layout_delete)
 
-
         title_label = QLabel("Delete a connectivity service TAPI message")
         font = QFont()
         font.setPointSize(16)  # Set the desired font size for the title
@@ -112,8 +114,14 @@ class TapiWindow(QWidget):
         panel_layout_delete.addWidget(title_label)
         json_data_delete["tapi-connectivity:input"][
             "tapi-connectivity:service-id-or-name"] = self.main_window.env.env.env.last_service_to_defrag.service_id
+        delete_url = "http DELETE 'https://172.20.132.200:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service=00000070-0000-0000-0000-000000146732"
+        pattern = r'(connectivity-service=.+)'
+        replacement = f'connectivity-service={self.main_window.env.env.env.last_service_to_defrag.service_id}"'
+        result_text = re.sub(pattern, replacement, delete_url)
+
         self.text_edit_delete = QTextEdit(self)
-        self.text_edit_delete.setPlainText(json.dumps(json_data_delete, indent=4))
+        # self.text_edit_delete.setPlainText(json.dumps(json_data_delete, indent=4))
+        self.text_edit_delete.setPlainText(result_text)
         panel_layout_delete.addWidget(self.text_edit_delete)
         delete_message.addWidget(panel_delete)
 
@@ -360,6 +368,9 @@ class MainWindow(QMainWindow):
         ### to show it in a full screen mode!
 
         self.showFullScreen()
+
+        ### to show in maximized way
+        # self.showMaximized()
 
     def stop_drl(self):
         if self.worker_cnt:
@@ -708,11 +719,12 @@ class MainWindow(QMainWindow):
         plt.title("Spectrum Assignment")  # Set the title
         plt.xticks([x + 0.5 for x in plt.xticks()[0][:-1]], [x for x in plt.xticks()[1][:-1]])
         plt.tight_layout()
-        canvas.draw()  # Redraw the canvas
+        try:
+            canvas.draw()  # Redraw the canvas
+        except:
+            pass
 
         return canvas
-
-
 
 
 class DtMainWindow(QMainWindow):
@@ -738,14 +750,12 @@ class DtMainWindow(QMainWindow):
         topology_layout = QHBoxLayout()
         button_and_text_layout = QHBoxLayout()  # Use QHBoxLayout for buttons and QTextEdit together.
 
-
         self.topology_plot = self.dt_plot_topology()
         self.topology_plot.setFixedSize(400, 500)
         topology_layout.addWidget(self.topology_plot)
         self.grid_plot = self.dt_plot_grid()
         self.grid_plot.setFixedSize(1400, 500)
         topology_layout.addWidget(self.grid_plot)
-
 
         pagelayout.addLayout(topology_layout)
         pagelayout.addLayout(button_and_text_layout)
@@ -777,9 +787,10 @@ class DtMainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(pagelayout)
         self.setCentralWidget(widget)
+
+        ### to show in maximized way
+        # self.showMaximized()
         self.showFullScreen()
-
-
 
     def dt_create_topology_slot(self):
         # Create an empty graph
@@ -817,9 +828,8 @@ class DtMainWindow(QMainWindow):
         slot_allocation[4, 1] = 2
 
         print(slot_allocation)
-        self.slot_allocation= slot_allocation
+        self.slot_allocation = slot_allocation
         # Print the resulting ndarray
-
 
     def dt_plot_topology(self):
         figure = plt.figure()
@@ -834,9 +844,6 @@ class DtMainWindow(QMainWindow):
         title = "Spectrum Assignment"
         return plot_spectrum_assignment_on_canvas(self.topology, self.slot_allocation, sc, values=True,
                                                   title=title)
-
-
-
 
 
 def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, title=None):
@@ -859,8 +866,7 @@ def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, t
 
     p = ax.pcolor(vector, cmap=cmap, norm=norm, edgecolors='gray')
 
-
-   #TODO: plotting a box between old initial slot and new slot when one connection is reallocated.
+    # TODO: plotting a box between old initial slot and new slot when one connection is reallocated.
     if values:
         thresh = vector.max() / 2.
         for i, j in itertools.product(range(vector.shape[0]), range(vector.shape[1])):
