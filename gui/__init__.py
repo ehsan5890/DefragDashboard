@@ -3,6 +3,7 @@ import itertools
 import pickle
 from random import randint
 import json
+import pprint
 
 from PyQt6.QtCore import QThreadPool
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QTextEdit
@@ -737,7 +738,10 @@ class DtMainWindow(QMainWindow):
         topology_layout = QHBoxLayout()
         button_and_text_layout = QHBoxLayout()  # Use QHBoxLayout for buttons and QTextEdit together.
 
-        self.load()  # TODO: comment later
+        # self.load()  # TODO: comment later
+
+        text = self.load_topology()
+        self.slot_allocation = np.full((1, 1), fill_value=-1)
 
         self.topology_plot = self.dt_plot_topology()
         self.topology_plot.setFixedSize(400, 500)
@@ -756,7 +760,9 @@ class DtMainWindow(QMainWindow):
         button_load = QPushButton("Load")
         button_load.pressed.connect(self.load)
         button_defrag = QPushButton("Perform Defragmentation")
+        button_defrag.pressed.connect(self.perform_defragmentation)
         button_reset = QPushButton("Reset")
+        button_reset.pressed.connect(self.reset_exp)
         button_panel_layout.addWidget(button_load)
         button_panel_layout.addWidget(button_defrag)
         button_panel_layout.addWidget(button_reset)
@@ -767,50 +773,131 @@ class DtMainWindow(QMainWindow):
         # path_delete = "tapi/tapi-delete.json"
         # json_data = load_json_from_file(path_create)
         # json_data_delete = load_json_from_file(path_delete)
-        text_edit = QTextEdit(self)
-        text_edit.setGeometry(10, 10, 580, 380)
+        self.text_edit = QTextEdit(self)
+        self.text_edit.setGeometry(10, 10, 580, 380)
         # text_edit.setPlainText(json.dumps(json_data, indent=4))
+        self.text_edit.setReadOnly(True)
+        self.text_edit.setMarkdown(text)
         # Add button panel and QTextEdit to button_and_text_layout
         button_and_text_layout.addWidget(button_panel)
-        button_and_text_layout.addWidget(text_edit)
+        button_and_text_layout.addWidget(self.text_edit)
 
         widget = QWidget()
         widget.setLayout(pagelayout)
         self.setCentralWidget(widget)
         self.showFullScreen()
-
-    def load(self):
-        self.topology = nx.DiGraph()
+    
+    def load_topology(self):
+        self.topology = nx.Graph()
         self.node_dict = {}
+        text = ""
         
         context = self.tapi_client.get_context()
+        text += "## Load topology\n"
+        text += "### HTTP GET https://localhost:8082/restconf/data/tapi-common:context\n\n"
+        text += f"```json\n{json.dumps(context, indent=2)}\n```"
         for node in context["tapi-common:context"]["tapi-topology:topology-context"]["topology"][0]["node"]:
-            self.topology.add_node(node["name"][0]["value"], uuid=node["uuid"])
-            self.node_dict[node["uuid"]] = node["name"][0]["value"]
+            name = node["name"][0]["value"]
+            if "." in name:
+                name = name.split(".")[0]
+            self.topology.add_node(name, uuid=node["uuid"], sip=[])
+            self.node_dict[node["uuid"]] = name
+
+            # loading the SIPs
+            for nep in node["owned-node-edge-point"]:
+                # skipping disabled end points
+                if len(nep["mapped-service-interface-point"]) == 0 \
+                    or nep["layer-protocol-name"] == "ODU" \
+                    or nep["layer-protocol-name"] == "PHOTONIC_MEDIA" \
+                    or "tapi-dsr:DIGITAL_SIGNAL_TYPE_100_GigE" not in nep["supported-cep-layer-protocol-qualifier"] \
+                    or "tapi-dsr:DIGITAL_SIGNAL_TYPE_OTU_4" not in nep["supported-cep-layer-protocol-qualifier"]:
+                    # or nep['lifecycle-state'] != 'INSTALLED':
+                    # or nep["administrative-state"] != 'UNLOCKED' \
+                    # or nep['operational-state'] != 'ENABLED':
+                    continue
+                for sip in nep["mapped-service-interface-point"]:
+                    self.topology.nodes[name]["sip"].append(sip["service-interface-point-uuid"])
         
         _id = 0
         for link in context["tapi-common:context"]["tapi-topology:topology-context"]["topology"][0]["link"]:
+            
+            found = False
+            for name in link["name"]:
+                if "NODE" in name["value"] and "OPTICAL" not in name["value"] and "ODU" not in name["value"] and "OTN" not in name["value"]:
+                    found = True
+                    break
+            if not found:
+                continue
+
             node_1 = self.node_dict[link["node-edge-point"][0]["node-uuid"]]
             node_2 = self.node_dict[link["node-edge-point"][1]["node-uuid"]]
-            if not self.topology.has_edge(node_1, node_2):
-                print(_id, link["uuid"])
-                print("\t", node_1, node_2)
+            if self.topology.has_node(node_1) \
+                    and self.topology.has_node(node_2) \
+                    and not self.topology.has_edge(node_1, node_2):
+                # print(_id, link["uuid"])
+                # print("\t", node_1, node_2)
                 self.topology.add_edge(node_1, node_2, id=_id, uuid=link["uuid"])
                 _id += 1
-        
-        self.slot_allocation = np.full((self.topology.number_of_edges(), 10), fill_value=-1)
+        return text
+    
+    def perform_defragmentation(self):
+        self.service_to_defragment
+        response = requests.delete(
+            f"https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/",
+            headers={
+                "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
+            },
+            verify=False,
+        )
+        print(response.status_code)
 
+    def load(self):
         
+        self.slot_allocation = np.full((self.topology.number_of_edges(), 6), fill_value=-1)
 
-        for i in range(10):
-            index = randint(0, self.topology.number_of_edges() - 1)
-            row = randint(0, 9)
-            self.slot_allocation[index, row] = randint(1, 20)
+        service_mapping = self.tapi_client.get_services()
+
+        text = "## Load services\n"
+        text += "### HTTP GET https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/connectivity-service\n\n"
+        text += f"```json\n{json.dumps(service_mapping, indent=2)}\n```"
+        text += "\n\n"
+        text += self.text_edit.toMarkdown()
+        self.text_edit.setMarkdown(text)
+        # self.text_edit.draw()
+
+        _id = 1
+        for service, values in service_mapping.items():
+            print(service)
+            # print(self.topology.edges())
+            if service == "CFC_WCC100G_66_70_service_2":
+                self.service_to_defragment = values["uuid"]
+            freq = int(values["central-frequency"]) / 10000
+            channel = int((freq - 19125) / 5)
+            source = self.node_dict[values["node-uuid"][0]]
+            destination = self.node_dict[values["node-uuid"][1]]
+            link_id = self.topology[source][destination]["id"]
+            print("\tchannel:", values["central-frequency"])
+            print("\tsource:", source, values["node-uuid"][0])
+            print("\tdst:", destination, values["node-uuid"][1])
+            print("\t", channel, link_id, _id)
+            self.slot_allocation[link_id, channel] = _id
+            _id += 1
+
+        # for i in range(10):
+        #     index = randint(0, self.topology.number_of_edges() - 1)
+        #     row = randint(0, 9)
+        #     self.slot_allocation[index, row] = randint(1, 20)
+        self.update_grid()
+    
+    def reset_exp(self):
+        self.slot_allocation = np.full((1, 1), fill_value=-1)
+        self.update_grid()
 
     def dt_plot_topology(self):
         figure = plt.figure()
         sc = FigureCanvasQTAgg(figure)
         pos = nx.spring_layout(self.topology, seed=2)  # You can choose a layout algorithm here
+        pos = {"NODE70": (1, 1), "NODE62": (1, 0), "NODE64": (0, 0), "NODE66": (0, 1)}
         nx.draw(self.topology, pos, with_labels=True, node_color='skyblue', font_weight='bold', node_size=1000)
         return sc
 
@@ -820,6 +907,40 @@ class DtMainWindow(QMainWindow):
         title = "Spectrum Assignment"
         return plot_spectrum_assignment_on_canvas(self.topology, self.slot_allocation, sc, values=True,
                                                   title=title)
+
+    def update_grid(self):
+        self.grid_plot.figure.clf()
+        title = "Spectrum Assignment"
+        canvas = plot_spectrum_assignment_on_canvas(self.topology, self.slot_allocation, self.grid_plot.figure.canvas, values=True,
+                                                  title=title)
+        canvas.draw()
+
+        pass
+
+        # canvas = self.grid_plot
+        # canvas.figure.clf()  # Clear the previous plot
+
+        # cmap = plt.cm.get_cmap("tab20")
+        # cmap.set_under(color='white')
+        # cmap_reverse = plt.cm.viridis_r
+        # cmap_reverse.set_under(color='black')
+        # # https://stackoverflow.com/questions/7164397/find-the-min-max-excluding-zeros-in-a-numpy-array-or-a-tuple-in-python
+        # masked_a = np.ma.masked_equal(self.slot_allocation, -1, copy=False)
+        # norm = mcolors.LogNorm(vmin=masked_a.min(), vmax=self.slot_allocation.max())
+
+        # # p = ax.pcolor(vector, cmap=cmap, norm=norm, edgecolors='gray')
+        # p = canvas.figure.add_subplot(111).pcolor(slot_allocation, cmap=cmap, norm=norm, edgecolors='gray')
+
+        # ax = canvas.figure.gca()
+        # ax.set_xlabel('Frequency slot')
+        # ax.set_ylabel('Link')
+        # plt.yticks([topology.edges[link]['id'] + .5 for link in topology.edges()],
+        #            [f'{topology.edges[link]["id"]} ({link[0]}-{link[1]})' for link in topology.edges()])
+
+        # plt.title("Spectrum Assignment")  # Set the title
+        # plt.xticks([x + 0.5 for x in plt.xticks()[0][:-1]], [x for x in plt.xticks()[1][:-1]])
+        # plt.tight_layout()
+        # canvas.draw()  # Redraw the canvas
 
 
 
@@ -840,6 +961,8 @@ def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, t
     cmap_reverse.set_under(color='black')
 
     # p = ax.pcolor(vector, cmap=cmap, vmin=-0.0001, edgecolors='gray')
+    if sum(vector[vector > -1]) == 0:
+        return canvas
     masked_a = np.ma.masked_equal(vector, -1, copy=False)
     norm = mcolors.LogNorm(vmin=masked_a.min(), vmax=vector.max())
 
@@ -862,9 +985,9 @@ def plot_spectrum_assignment_on_canvas(topology, vector, canvas, values=False, t
                 blue = max(color[2] - 0.5, 0.)
                 color = (red, blue, green)
             #             print(i, j, vector[i, j], diff_color)
-            # plt.text(j + 0.5, i + 0.5, text,
-            #          horizontalalignment="center", verticalalignment='center',
-            #          color=color)
+            plt.text(j + 0.5, i + 0.5, text,
+                     horizontalalignment="center", verticalalignment='center',
+                     color=color)
 
     ax.set_xlabel('Frequency slot')
     ax.set_ylabel('Link')
