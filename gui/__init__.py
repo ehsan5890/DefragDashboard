@@ -864,10 +864,12 @@ class DtMainWindow(QMainWindow):
             text += "<p font-color='blue'>Success!</p>"
             text += "\n\n"
         
-        
-
+        self.load()  # update visualization
         text += self.text_edit.toMarkdown()
         self.text_edit.setMarkdown(text)
+
+        # create new service
+
 
     def load(self):
         
