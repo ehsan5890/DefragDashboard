@@ -46,11 +46,11 @@ class TAPIClient:
         return context.json()
     
     def get_services(self) -> list:
-        if self.mock:
-            with open("tests/list_service.json", "rt", encoding="UTF-8") as file:
-                text = file.read()
-            context = json.loads(text)
-            return context
+        # if self.mock:
+        #     with open("tests/list_service.json", "rt", encoding="UTF-8") as file:
+        #         text = file.read()
+        #     context = json.loads(text)
+        #     return context
         response = requests.get(
             "https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/connectivity-service",
             headers={
@@ -74,7 +74,7 @@ class TAPIClient:
                 if s_name.endswith("_NFC"):
                     s_name = s_name.replace("_NFC", "")
                     if s_name not in service_mapping:
-                        service_mapping[s_name] = {"uuid": service["uuid"]}
+                        service_mapping[s_name] = {}
                     for endpoint in service["end-point"]:
                         service_mapping[s_name]["central-frequency"] = endpoint["tapi-adva:adva-connectivity-service-end-point-spec"]["adva-network-port-parameters"]["channel"]["central-frequency"]
                 else:
@@ -82,6 +82,8 @@ class TAPIClient:
                     # pprint(service["end-point"])
                     if s_name not in service_mapping:
                         service_mapping[s_name] = {"uuid": service["uuid"]}
+                    else:
+                        service_mapping[s_name]["uuid"] = service["uuid"]
                     for endpoint in service["end-point"]:
                         for key, value in endpoint["connection-end-point"][0].items():
                             if key not in service_mapping[s_name]:
