@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # agent = DQN.load( f"./assets/agent30/tests/best_model")
 
     # create a TAPI client and make sure it connects
-    tapi_client = TAPIClient()
+    tapi_client = TAPIClient(mock=False)
 
     app = QApplication(sys.argv)
     w = DtMainWindow(tapi_client)
