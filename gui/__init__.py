@@ -683,7 +683,7 @@ class MainWindow(QMainWindow):
                 slot_allocation = self.env_no_df.env.env.spectrum_slots_allocation
                 title = "Spectrum Assignment for No defragmentation scenario"
         # Plot the spectrum assignment graph
-        return plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=True,
+        return plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=False,
                                                   title=title)
 
     def update_grid(self, topology, slot_allocation):
