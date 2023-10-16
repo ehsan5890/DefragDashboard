@@ -4,6 +4,7 @@ import pickle
 from random import randint
 import json
 import time
+import re
 import pprint
 
 from PyQt6.QtCore import QThreadPool
@@ -85,7 +86,11 @@ class TapiWindow(QWidget):
 
         self.text_edit = QTextEdit(self)
         self.text_edit.setGeometry(10, 10, 580, 380)
-        self.text_edit.setPlainText(json.dumps(json_data, indent=4))
+        # self.text_edit.setPlainText(json.dumps(json_data, indent=4))
+        text_create = "http POST 'https://172.20.132.200:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context'\n"
+        text_create += json.dumps(json_data, indent=4)
+        # self.text_edit.setPlainText(json.dumps(json_data, indent=4))
+        self.text_edit.setPlainText(text_create)
         panel_layout.addWidget(self.text_edit)
         create_message.addWidget(panel)
 
@@ -115,8 +120,15 @@ class TapiWindow(QWidget):
         panel_layout_delete.addWidget(title_label)
         json_data_delete["tapi-connectivity:input"][
             "tapi-connectivity:service-id-or-name"] = self.main_window.env.env.env.last_service_to_defrag.service_id
+
+        delete_url = "http DELETE 'https://172.20.132.200:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service=00000070-0000-0000-0000-000000146732"
+        pattern = r'(connectivity-service=.+)'
+        replacement = f'connectivity-service={self.main_window.env.env.env.last_service_to_defrag.service_id}"'
+        result_text = re.sub(pattern, replacement, delete_url)
+
         self.text_edit_delete = QTextEdit(self)
-        self.text_edit_delete.setPlainText(json.dumps(json_data_delete, indent=4))
+        # self.text_edit_delete.setPlainText(json.dumps(json_data_delete, indent=4))
+        self.text_edit_delete.setPlainText(result_text)
         panel_layout_delete.addWidget(self.text_edit_delete)
         delete_message.addWidget(panel_delete)
 
