@@ -807,7 +807,7 @@ class DtMainWindow(QMainWindow):
         text = ""
         
         context = self.tapi_client.get_context()
-        text += "## Load topology\n"
+        text += "---\n## Load topology\n"
         text += "### HTTP GET https://localhost:8082/restconf/data/tapi-common:context\n\n"
         text += f"```json\n{json.dumps(context, indent=2)}\n```"
         for node in context["tapi-common:context"]["tapi-topology:topology-context"]["topology"][0]["node"]:
@@ -864,7 +864,7 @@ class DtMainWindow(QMainWindow):
             timeout=300,
         )
         print(response.status_code)
-        text = "## Performing defragmentation\n"
+        text = "---\n## Performing defragmentation\n"
         text += f"### Deleting service {self.service_to_defragment}\n"
         text += f"#### HTTP DELETE https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/\n\n"
         if response.status_code != 204:
@@ -877,9 +877,10 @@ class DtMainWindow(QMainWindow):
             text += "\n\n#### <p font-color='blue'>Success!</p>"
             text += "\n\n"
         
-        self.load()  # update visualization
+        # self.load()  # update visualization
         text += self.text_edit.toMarkdown()
         self.text_edit.setMarkdown(text)
+        # self.text_edit.drawFrame()
 
         # create new service
         time.sleep(10)
@@ -988,9 +989,9 @@ class DtMainWindow(QMainWindow):
             verify=False
         )
         print(create.status_code)
-        text = f"### Creating defragmented service\n"
+        text = f"---\n### Creating defragmented service\n"
         text += f"#### HTTP POST https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context\n\n"
-        if response.status_code != 201:
+        if create.status_code != 201:
             text += "\n\n#### <p font-color='red'>Error!</p>"
             text += "\n\n"
             text += self.text_edit.toMarkdown()
@@ -1000,21 +1001,52 @@ class DtMainWindow(QMainWindow):
             text += "\n\n#### <p font-color='blue'>Success!</p>"
             text += "\n\n"
         
-        self.load()  # update visualization
+        # self.load()  # update visualization
         text += self.text_edit.toMarkdown()
         self.text_edit.setMarkdown(text)
+
+        time.sleep(5)
 
 
     def load(self):
         
         self.slot_allocation = np.full((self.topology.number_of_edges(), 6), fill_value=-1)
 
-        service_mapping = self.tapi_client.get_services()
+        services = self.tapi_client.get_services()
+        service_mapping = {}
+        for service in services['tapi-connectivity:connectivity-service']:
+            found = False
+            s_name = ""
+            for name in service["name"]:
+                # print(name)
+                if "ODU" in name["value"] or "GBE100" in name["value"]:
+                    continue
+                found = True
+                s_name = name["value"]
+            if found:
+                if s_name.endswith("_NFC"):
+                    s_name = s_name.replace("_NFC", "")
+                    if s_name not in service_mapping:
+                        service_mapping[s_name] = {}
+                    for endpoint in service["end-point"]:
+                        service_mapping[s_name]["central-frequency"] = endpoint["tapi-adva:adva-connectivity-service-end-point-spec"]["adva-network-port-parameters"]["channel"]["central-frequency"]
+                else:
+                    # pprint(service)
+                    # pprint(service["end-point"])
+                    if s_name not in service_mapping:
+                        service_mapping[s_name] = {"uuid": service["uuid"]}
+                    else:
+                        service_mapping[s_name]["uuid"] = service["uuid"]
+                    for endpoint in service["end-point"]:
+                        for key, value in endpoint["connection-end-point"][0].items():
+                            if key not in service_mapping[s_name]:
+                                service_mapping[s_name][key] = []
+                            service_mapping[s_name][key].append(value)
         print("\n\n", service_mapping, "\n\n")
 
-        text = "## Load services\n"
+        text = "---\n## Load services\n"
         text += "### HTTP GET https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/connectivity-service\n\n"
-        text += f"```json\n{json.dumps(service_mapping, indent=2)}\n```"
+        text += f"```json\n{json.dumps(services, indent=2)}\n```"
         text += "\n\n"
         text += self.text_edit.toMarkdown()
         self.text_edit.setMarkdown(text)
@@ -1022,7 +1054,7 @@ class DtMainWindow(QMainWindow):
 
         _id = 1
         for service, values in service_mapping.items():
-            print(service)
+            print(service, values)
             # print(self.topology.edges())
             if service == "CFC_WCC100G_66_70_service_2" and "uuid" in values:
                 self.service_to_defragment = values["uuid"]
@@ -1032,14 +1064,15 @@ class DtMainWindow(QMainWindow):
                 print("\n\n")
             freq = int(values["central-frequency"]) / 10000
             channel = int((freq - 19125) / 5)
-            source = self.node_dict[values["node-uuid"][0]]
-            destination = self.node_dict[values["node-uuid"][1]]
-            link_id = self.topology[source][destination]["id"]
             print("\tuuid:", values["uuid"])
             print("\tchannel:", values["central-frequency"])
-            print("\tsource:", source, values["node-uuid"][0])
-            print("\tdst:", destination, values["node-uuid"][1])
-            print("\t", channel, link_id, _id)
+            if "node-uuid" in values:
+                source = self.node_dict[values["node-uuid"][0]]
+                print("\tsource:", source, values["node-uuid"][0])
+                destination = self.node_dict[values["node-uuid"][1]]
+                print("\tdst:", destination, values["node-uuid"][1])
+                link_id = self.topology[source][destination]["id"]
+                print("\t", channel, link_id, _id)
             print("\n")
             self.slot_allocation[link_id, channel] = _id
             _id += 1
@@ -1051,19 +1084,20 @@ class DtMainWindow(QMainWindow):
         self.update_grid()
     
     def reset_exp(self):
-        response = requests.delete(
-            f"https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/",
-            headers={
-                "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
-            },
-            verify=False,
-            timeout=300,
-        )
-        print("deleting for reset:", self.service_to_defragment, response.status_code)
+        if hasattr(self, "service_to_defragment") and self.service_to_defragment != None:
+            response = requests.delete(
+                f"https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/",
+                headers={
+                    "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
+                },
+                verify=False,
+                timeout=300,
+            )
+            print("deleting for reset:", self.service_to_defragment, response.status_code)
 
-        if response.status_code != 204:
-            print("error defragmenting!!!")
-            return
+            if response.status_code != 204:
+                print("error deleting service!!!")
+                # return
 
         # create new service
         time.sleep(10)

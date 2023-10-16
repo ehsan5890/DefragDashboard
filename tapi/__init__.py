@@ -59,37 +59,7 @@ class TAPIClient:
             verify=False,
             timeout=300,
         )
-        services = response.json()
-        service_mapping = {}
-        for service in services['tapi-connectivity:connectivity-service']:
-            found = False
-            s_name = ""
-            for name in service["name"]:
-                # print(name)
-                if "ODU" in name["value"] or "GBE100" in name["value"]:
-                    continue
-                found = True
-                s_name = name["value"]
-            if found:
-                if s_name.endswith("_NFC"):
-                    s_name = s_name.replace("_NFC", "")
-                    if s_name not in service_mapping:
-                        service_mapping[s_name] = {}
-                    for endpoint in service["end-point"]:
-                        service_mapping[s_name]["central-frequency"] = endpoint["tapi-adva:adva-connectivity-service-end-point-spec"]["adva-network-port-parameters"]["channel"]["central-frequency"]
-                else:
-                    # pprint(service)
-                    # pprint(service["end-point"])
-                    if s_name not in service_mapping:
-                        service_mapping[s_name] = {"uuid": service["uuid"]}
-                    else:
-                        service_mapping[s_name]["uuid"] = service["uuid"]
-                    for endpoint in service["end-point"]:
-                        for key, value in endpoint["connection-end-point"][0].items():
-                            if key not in service_mapping[s_name]:
-                                service_mapping[s_name][key] = []
-                            service_mapping[s_name][key].append(value)
-        return service_mapping
+        return response.json()
 
 
     def establish_new_service(self, service: Service) -> bool:
