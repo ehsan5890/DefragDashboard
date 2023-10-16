@@ -3,6 +3,7 @@ import itertools
 import pickle
 from random import randint
 import json
+import time
 import pprint
 
 from PyQt6.QtCore import QThreadPool
@@ -748,7 +749,7 @@ class DtMainWindow(QMainWindow):
         self.topology_plot.setFixedSize(400, 500)
         topology_layout.addWidget(self.topology_plot)
         self.grid_plot = self.dt_plot_grid()
-        self.grid_plot.setFixedSize(1400, 500)
+        self.grid_plot.setFixedSize(1000, 500)
         topology_layout.addWidget(self.grid_plot)
 
         pagelayout.addLayout(topology_layout)
@@ -775,7 +776,7 @@ class DtMainWindow(QMainWindow):
         # json_data = load_json_from_file(path_create)
         # json_data_delete = load_json_from_file(path_delete)
         self.text_edit = QTextEdit(self)
-        self.text_edit.setGeometry(10, 10, 580, 380)
+        self.text_edit.setGeometry(10, 10, 280, 380)
         # text_edit.setPlainText(json.dumps(json_data, indent=4))
         self.text_edit.setReadOnly(True)
         self.text_edit.setMarkdown(text)
@@ -855,13 +856,13 @@ class DtMainWindow(QMainWindow):
         text += f"### Deleting service {self.service_to_defragment}\n"
         text += f"#### HTTP DELETE https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/\n\n"
         if response.status_code != 204:
-            text += "<p font-color='red'>Error!</p>"
+            text += "\n\n#### <p font-color='red'>Error!</p>"
             text += "\n\n"
             text += self.text_edit.toMarkdown()
             self.text_edit.setMarkdown(text)
             return
         else:
-            text += "<p font-color='blue'>Success!</p>"
+            text += "\n\n#### <p font-color='blue'>Success!</p>"
             text += "\n\n"
         
         self.load()  # update visualization
@@ -869,6 +870,127 @@ class DtMainWindow(QMainWindow):
         self.text_edit.setMarkdown(text)
 
         # create new service
+        time.sleep(10)
+
+        create = requests.post(
+            "https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context",
+            headers={
+                "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
+                "Content-Type": "application/yang-data+json",
+            },
+            data="""
+            {
+
+    "tapi-connectivity:connectivity-service": [
+
+        {
+
+            "end-point": [
+
+                {
+
+                    "layer-protocol-name": "DSR",
+
+                    "layer-protocol-qualifier": "tapi-dsr:DIGITAL_SIGNAL_TYPE_100_GigE",
+
+                    "service-interface-point": {
+
+                        "service-interface-point-uuid": "00000010-0000-0000-0000-000000060549"
+
+                    },
+
+                    "tapi-adva:adva-connectivity-service-end-point-spec": {
+
+                        "adva-network-port-parameters": {
+
+                            "channel": {
+
+                                "central-frequency": 19130
+
+                            },
+
+                            "termination-level": "OPU"
+
+                        }
+
+                    }
+
+                },
+
+                {
+
+                    "layer-protocol-name": "DSR",
+
+                    "layer-protocol-qualifier": "tapi-dsr:DIGITAL_SIGNAL_TYPE_100_GigE",
+
+                    "service-interface-point": {
+
+                        "service-interface-point-uuid": "00000010-0000-0000-0000-000000060578"
+
+                    },
+
+                    "tapi-adva:adva-connectivity-service-end-point-spec": {
+
+                        "adva-network-port-parameters": {
+
+                            "channel": {
+
+                                "central-frequency": 19130
+
+                            },
+
+                            "termination-level": "OPU"
+
+                        }
+
+                    }
+
+                }
+
+            ],
+
+            "service-layer": "DSR",
+
+            "service-type": "POINT_TO_POINT_CONNECTIVITY",
+
+            "name": [
+
+                {
+
+                    "value": "CFC_WCC100G_66_70_service_2",
+
+                    "value-name": "USER"
+
+                }
+
+            ],
+
+            "include-link": ["30000060-0000-0000-0000-000000048794"]
+
+        }
+
+    ]
+
+}
+            """,
+            verify=False
+        )
+        print(create.status_code)
+        text = f"### Creating defragmented service\n"
+        text += f"#### HTTP POST https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context\n\n"
+        if response.status_code != 201:
+            text += "\n\n#### <p font-color='red'>Error!</p>"
+            text += "\n\n"
+            text += self.text_edit.toMarkdown()
+            self.text_edit.setMarkdown(text)
+            return
+        else:
+            text += "\n\n#### <p font-color='blue'>Success!</p>"
+            text += "\n\n"
+        
+        self.load()  # update visualization
+        text += self.text_edit.toMarkdown()
+        self.text_edit.setMarkdown(text)
 
 
     def load(self):
@@ -876,6 +998,7 @@ class DtMainWindow(QMainWindow):
         self.slot_allocation = np.full((self.topology.number_of_edges(), 6), fill_value=-1)
 
         service_mapping = self.tapi_client.get_services()
+        print("\n\n", service_mapping, "\n\n")
 
         text = "## Load services\n"
         text += "### HTTP GET https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/connectivity-service\n\n"
@@ -889,17 +1012,23 @@ class DtMainWindow(QMainWindow):
         for service, values in service_mapping.items():
             print(service)
             # print(self.topology.edges())
-            if service == "CFC_WCC100G_66_70_service_2":
+            if service == "CFC_WCC100G_66_70_service_2" and "uuid" in values:
                 self.service_to_defragment = values["uuid"]
+                print("\n\nfound service to defragment", self.service_to_defragment)
+                print(service)
+                print(values)
+                print("\n\n")
             freq = int(values["central-frequency"]) / 10000
             channel = int((freq - 19125) / 5)
             source = self.node_dict[values["node-uuid"][0]]
             destination = self.node_dict[values["node-uuid"][1]]
             link_id = self.topology[source][destination]["id"]
+            print("\tuuid:", values["uuid"])
             print("\tchannel:", values["central-frequency"])
             print("\tsource:", source, values["node-uuid"][0])
             print("\tdst:", destination, values["node-uuid"][1])
             print("\t", channel, link_id, _id)
+            print("\n")
             self.slot_allocation[link_id, channel] = _id
             _id += 1
 
@@ -910,6 +1039,130 @@ class DtMainWindow(QMainWindow):
         self.update_grid()
     
     def reset_exp(self):
+        response = requests.delete(
+            f"https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service={self.service_to_defragment}/",
+            headers={
+                "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
+            },
+            verify=False,
+            timeout=300,
+        )
+        print("deleting for reset:", self.service_to_defragment, response.status_code)
+
+        if response.status_code != 204:
+            print("error defragmenting!!!")
+            return
+
+        # create new service
+        time.sleep(10)
+
+        create = requests.post(
+            "https://localhost:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context",
+            headers={
+                "Authorization": "Basic YWRtaW46bm9tb3Jlc2VjcmV0",
+                "Content-Type": "application/yang-data+json",
+            },
+            data="""
+            {
+
+    "tapi-connectivity:connectivity-service": [
+
+        {
+
+            "end-point": [
+
+                {
+
+                    "layer-protocol-name": "DSR",
+
+                    "layer-protocol-qualifier": "tapi-dsr:DIGITAL_SIGNAL_TYPE_100_GigE",
+
+                    "service-interface-point": {
+
+                        "service-interface-point-uuid": "00000010-0000-0000-0000-000000060549"
+
+                    },
+
+                    "tapi-adva:adva-connectivity-service-end-point-spec": {
+
+                        "adva-network-port-parameters": {
+
+                            "channel": {
+
+                                "central-frequency": 19145
+
+                            },
+
+                            "termination-level": "OPU"
+
+                        }
+
+                    }
+
+                },
+
+                {
+
+                    "layer-protocol-name": "DSR",
+
+                    "layer-protocol-qualifier": "tapi-dsr:DIGITAL_SIGNAL_TYPE_100_GigE",
+
+                    "service-interface-point": {
+
+                        "service-interface-point-uuid": "00000010-0000-0000-0000-000000060578"
+
+                    },
+
+                    "tapi-adva:adva-connectivity-service-end-point-spec": {
+
+                        "adva-network-port-parameters": {
+
+                            "channel": {
+
+                                "central-frequency": 19145
+
+                            },
+
+                            "termination-level": "OPU"
+
+                        }
+
+                    }
+
+                }
+
+            ],
+
+            "service-layer": "DSR",
+
+            "service-type": "POINT_TO_POINT_CONNECTIVITY",
+
+            "name": [
+
+                {
+
+                    "value": "CFC_WCC100G_66_70_service_2",
+
+                    "value-name": "USER"
+
+                }
+
+            ],
+
+            "include-link": ["30000060-0000-0000-0000-000000048794"]
+
+        }
+
+    ]
+
+}
+            """,
+            verify=False
+        )
+        print("creating for reset:", create.status_code)
+        if create.status_code != 201:
+            print("error creating!")
+            return
         self.slot_allocation = np.full((1, 1), fill_value=-1)
         self.update_grid()
 
@@ -919,6 +1172,8 @@ class DtMainWindow(QMainWindow):
         pos = nx.spring_layout(self.topology, seed=2)  # You can choose a layout algorithm here
         pos = {"NODE70": (1, 1), "NODE62": (1, 0), "NODE64": (0, 0), "NODE66": (0, 1)}
         nx.draw(self.topology, pos, with_labels=True, node_color='skyblue', font_weight='bold', node_size=1000)
+        figure.gca().set_xlim([-.3, 1.3])
+        figure.gca().set_ylim([-.3, 1.3])
         return sc
 
     def dt_plot_grid(self):
