@@ -87,16 +87,21 @@ class TapiWindow(QWidget):
         self.text_edit = QTextEdit(self)
         self.text_edit.setGeometry(10, 10, 580, 380)
         # self.text_edit.setPlainText(json.dumps(json_data, indent=4))
-        text_create = "http POST 'https://172.20.132.200:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context'\n"
-        text_create += json.dumps(json_data, indent=4)
+        text_create = """## HTTP POST /tapi-common:context/tapi-connectivity:connectivity-context
+        """
+        text_create += "\n```json\n"
+        text_create += json.dumps(json_data, indent=2)
+        text_create += "\n```\n"
         # self.text_edit.setPlainText(json.dumps(json_data, indent=4))
-        self.text_edit.setPlainText(text_create)
+        self.text_edit.setReadOnly(True)
+        self.text_edit.setMarkdown(text_create)
+        
         panel_layout.addWidget(self.text_edit)
         create_message.addWidget(panel)
 
 
         route = " -> ".join(self.main_window.env.env.env.last_service_to_defrag.route.node_list)
-        label_text = f"demand ID is {self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n The route" \
+        label_text = f"Demand #{self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n\nThe route" \
                      f" is {route}, \n the old initial slot is {self.main_window.env.env.env.last_old_initial_slot} and \n the new initial slot is {self.main_window.env.env.env.last_new_initial_slot}"
 
         label = QLabel(label_text)
@@ -121,14 +126,16 @@ class TapiWindow(QWidget):
         json_data_delete["tapi-connectivity:input"][
             "tapi-connectivity:service-id-or-name"] = self.main_window.env.env.env.last_service_to_defrag.service_id
 
-        delete_url = "http DELETE 'https://172.20.132.200:8082/restconf/data/tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service=00000070-0000-0000-0000-000000146732"
+        delete_url = """## HTTP DELETE /tapi-common:context/tapi-connectivity:connectivity-context/tapi-connectivity:connectivity-service=00000070-0000-0000-0000-000000146732
+        """
         pattern = r'(connectivity-service=.+)'
         replacement = f'connectivity-service={self.main_window.env.env.env.last_service_to_defrag.service_id}"'
         result_text = re.sub(pattern, replacement, delete_url)
 
         self.text_edit_delete = QTextEdit(self)
         # self.text_edit_delete.setPlainText(json.dumps(json_data_delete, indent=4))
-        self.text_edit_delete.setPlainText(result_text)
+        self.text_edit_delete.setReadOnly(True)
+        self.text_edit_delete.setMarkdown(result_text)
         panel_layout_delete.addWidget(self.text_edit_delete)
         delete_message.addWidget(panel_delete)
 
@@ -204,7 +211,7 @@ class FirstAllocationWindow(QWidget):
 
         route = " -> ".join(self.main_window.env.env.env.last_service_to_defrag.route.node_list)
 
-        label_text = f"demand ID is {self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n The route" \
+        label_text = f"Demand #{self.main_window.env.env.env.last_service_to_defrag.service_id} \n from source {self.main_window.env.env.env.last_service_to_defrag.source} to destination {self.main_window.env.env.env.last_service_to_defrag.destination}. \n\nThe route" \
                      f" is {route}, \n the old initial slot is {self.main_window.env.env.env.last_old_initial_slot} and \n the new initial slot is {self.main_window.env.env.env.last_new_initial_slot}"
         label = QLabel(label_text)
         font = QFont()
@@ -278,7 +285,7 @@ class MainWindow(QMainWindow):
     - all plotting
     """
 
-    def __init__(self, env, agent, tapi_client):
+    def __init__(self, env, agent):
         super().__init__()
         self.blocked = copy.deepcopy(env.env.env.blocked_services)
         self.blocked_nodefrag = copy.deepcopy(env.env.env.blocked_services)
@@ -294,7 +301,6 @@ class MainWindow(QMainWindow):
         self.env_no_df = copy.deepcopy(env)
         self.saved_env = copy.deepcopy(env)
         self.agent = agent
-        self.tapi_client = tapi_client
         self.continue_flag = False  # to Continue the DRL-based defragmentation.
         self.worker_cnt = None
         self.x_data = np.arange(-400, 0)
@@ -325,7 +331,7 @@ class MainWindow(QMainWindow):
         self.grid_plot.setFixedSize(1400, 500)
         topology_layout.addWidget(self.grid_plot)
 
-        self.btn_advance = QPushButton("Advance arrivals ")
+        self.btn_advance = QPushButton("Advance arrivals")
         self.btn_advance.pressed.connect(self.advance_arrivals)
         button_layout.addWidget(self.btn_advance)
 
@@ -346,6 +352,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_reset)
 
         self.btn_tapi = QPushButton("Show TAPI message")
+        self.btn_tapi.setEnabled(False)
         self.btn_tapi.pressed.connect(self.show_tapi)
         button_layout.addWidget(self.btn_tapi)
 
@@ -410,6 +417,7 @@ class MainWindow(QMainWindow):
         self.env_no_df = copy.deepcopy(env)
         self.btn_advance.setEnabled(True)
         self.btn_advance.setText("advance")
+        self.btn_tapi.setEnabled(True)
 
     def start_drl(self):
 
@@ -455,6 +463,8 @@ class MainWindow(QMainWindow):
         r_frag_nodefrag_update = result[4]
         reward_update = result[5]
         reward_nodefrag_update = result[6]
+
+        self.btn_tapi.setEnabled(True)
 
         blocked_update = result[7]
         blocked_nodefrag_update = result[8]
@@ -687,14 +697,14 @@ class MainWindow(QMainWindow):
         if first_allocation:
             # slot_allocation = self.env.env.env.last_spectrum_slot_allocation
             slot_allocation = self.slot_allocation_before_action
-            title = "Spectrum Assignment before connection reallocation"
+            title = "Spectrum assignment before connection reallocation"
         else:
             if drl:
                 slot_allocation = self.env.env.env.spectrum_slots_allocation
-                title = "Spectrum Assignment"
+                title = "Spectrum assignment"
             else:
                 slot_allocation = self.env_no_df.env.env.spectrum_slots_allocation
-                title = "Spectrum Assignment for No defragmentation scenario"
+                title = "Spectrum assignment for No defragmentation scenario"
         # Plot the spectrum assignment graph
         return plot_spectrum_assignment_on_canvas(topology, slot_allocation, sc, values=False,
                                                   title=title)

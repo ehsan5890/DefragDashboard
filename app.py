@@ -65,12 +65,9 @@ if __name__ == "__main__":
 
     ## testing changing the episode length
     # env.env.env.episode_length = 20
-    agent = DQN.load( f"./assets/agent30/tests/best_model")
-
-    # create a TAPI client and make sure it connects
-    tapi_client = None
+    agent = DQN.load(f"./assets/agent30/tests/best_model")
 
     app = QApplication(sys.argv)
-    w = MainWindow(env, agent, tapi_client)  # TODO: pass the environment to the main window
+    w = MainWindow(env, agent)
     w.show()
     app.exec()
